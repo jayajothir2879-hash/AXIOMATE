@@ -10,7 +10,7 @@ services:
       - key: NODE_ENV
         value: production
       - key: CLIENT_ORIGIN
-        value: https://your-frontend-domain.vercel.app
+        value: https://axiomate-eta.vercel.app
       - key: DATABASE_URL
         sync: false
       - key: JWT_SECRET

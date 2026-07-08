@@ -8,6 +8,7 @@ import { Logo } from '../components/Sidebar';
 export default function Signup() {
   const [form, setForm] = useState({ name: '', email: '', role: 'Employee', password: '', confirm: '' });
   const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
   const [loading, setLoading] = useState(false);
   const { signup } = useAuth();
   const navigate = useNavigate();
@@ -19,13 +20,14 @@ export default function Signup() {
     if (!form.name || !form.email || !form.password) { setError('Please fill in all required fields.'); return; }
     if (form.password !== form.confirm) { setError('Passwords do not match.'); return; }
     if (form.password.length < 6) { setError('Password must be at least 6 characters.'); return; }
-    setError(''); setLoading(true);
+    setError(''); setNotice(''); setLoading(true);
     try {
       const data = await signup({ name: form.name, email: form.email, password: form.password, role: form.role });
       if (data.session) {
         navigate('/dashboard');
       } else {
-        navigate('/login');
+        setNotice('Account created. Check your email for the confirmation link before signing in.');
+        navigate('/login', { state: { confirmationNotice: 'Account created. Check your email for the confirmation link before signing in.' } });
       }
     } catch (err) {
       setError(err.message || 'Unable to create account.');
@@ -59,6 +61,7 @@ export default function Signup() {
           <Field label="Password"><input value={form.password} onChange={set('password')} type="password" className="in" placeholder="Create a password" /></Field>
           <Field label="Confirm Password"><input value={form.confirm} onChange={set('confirm')} type="password" className="in" placeholder="Re-enter password" /></Field>
           {error && <div className="text-[12.5px] text-red-300">{error}</div>}
+          {notice && <div className="text-[12.5px] text-emerald-300">{notice}</div>}
           <button disabled={loading} type="submit" className="w-full py-2.5 rounded-lg font-semibold text-sm bg-teal hover:bg-teal-light text-white disabled:opacity-60">
             {loading ? 'Creating…' : 'Create Account'}
           </button>

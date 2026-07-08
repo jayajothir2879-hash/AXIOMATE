@@ -1,87 +1,89 @@
 // src/context/AuthContext.jsx
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import api from '../lib/api';
+import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { supabase } from '../lib/supabaseClient';
 
 const AuthContext = createContext(null);
+
+async function loadProfile(authUser) {
+  if (!authUser) return null;
+
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', authUser.id)
+    .maybeSingle();
+
+  if (error) {
+    console.error('Could not load profile:', error.message);
+  }
+
+  if (!data) {
+    return {
+      id: authUser.id,
+      name: authUser.user_metadata?.name || authUser.email,
+      email: authUser.email,
+      role: authUser.user_metadata?.role || 'Employee',
+    };
+  }
+
+  return data;
+}
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [token, setToken] = useState(localStorage.getItem('authToken'));
 
   useEffect(() => {
-    // Load user from token if it exists
-    if (token) {
-      api.defaults.headers.Authorization = `Bearer ${token}`;
-      loadUser();
-    } else {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      const profile = await loadProfile(session?.user);
+      setUser(profile);
       setLoading(false);
-    }
+    });
+
+    const { data: listener } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      const profile = await loadProfile(session?.user);
+      setUser(profile);
+    });
+
+    return () => listener.subscription.unsubscribe();
   }, []);
 
-  const loadUser = async () => {
-    try {
-      const response = await api.get('/auth/me');
-      setUser(response.data.user);
-    } catch (error) {
-      console.error('Failed to load user:', error);
-      localStorage.removeItem('authToken');
-      setToken(null);
-      setUser(null);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const login = async (email, password) => {
-    try {
-      const response = await api.post('/auth/login', { email, password });
-      const { token: newToken, user: userData } = response.data;
-      
-      localStorage.setItem('authToken', newToken);
-      api.defaults.headers.Authorization = `Bearer ${newToken}`;
-      setToken(newToken);
-      setUser(userData);
-      
-      return userData;
-    } catch (error) {
-      throw new Error(error.response?.data?.message || 'Login failed');
-    }
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) throw error;
+    const profile = await loadProfile(data.user);
+    setUser(profile);
+    return profile;
   };
 
   const signup = async ({ name, email, password, role }) => {
-    try {
-      const response = await api.post('/auth/signup', { name, email, password, role });
-      const { token: newToken, user: userData } = response.data;
-      
-      localStorage.setItem('authToken', newToken);
-      api.defaults.headers.Authorization = `Bearer ${newToken}`;
-      setToken(newToken);
-      setUser(userData);
-      
-      return userData;
-    } catch (error) {
-      throw new Error(error.response?.data?.message || 'Signup failed');
-    }
+    const redirectUrl = new URL('/login?confirmation=success', globalThis.location.origin).toString();
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: { name, role },
+        emailRedirectTo: redirectUrl,
+      },
+    });
+    if (error) throw error;
+    return data;
   };
 
   const logout = async () => {
-    try {
-      localStorage.removeItem('authToken');
-      delete api.defaults.headers.Authorization;
-      setToken(null);
-      setUser(null);
-    } catch (error) {
-      console.error('Logout error:', error);
-    }
+    await supabase.auth.signOut();
+    setUser(null);
   };
 
   const updateUser = (u) => setUser(u);
 
+  const value = useMemo(
+    () => ({ user, loading, login, signup, logout, updateUser }),
+    [user, loading, login, signup, logout, updateUser]
+  );
+
   return (
-    <AuthContext.Provider value={{ user, loading, login, signup, logout, updateUser }}>
-      {children}
-    </AuthContext.Provider>
+    <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
   );
 }
 

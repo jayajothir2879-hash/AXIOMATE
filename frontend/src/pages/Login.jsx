@@ -1,25 +1,29 @@
 // src/pages/Login.jsx
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Logo } from '../components/Sidebar';
 
 export default function Login() {
-  const [email, setEmail] = useState('admin@axiomate.com');
+  const location = useLocation();
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [notice, setNotice] = useState(location.state?.confirmationNotice || (new URLSearchParams(location.search).get('confirmation') === 'success'
+    ? 'Email confirmed. You can sign in now.'
+    : ''));
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
 
   const submit = async (e) => {
     e.preventDefault();
-    setError(''); setLoading(true);
+    setError(''); setNotice(''); setLoading(true);
     try {
       await login(email, password);
       navigate('/dashboard');
     } catch (err) {
-      setError(err.message || 'Unable to sign in. Check your Supabase project is configured in .env.');
+      setError(err.message || 'Unable to sign in. Check your email and password.');
     } finally {
       setLoading(false);
     }
@@ -35,8 +39,9 @@ export default function Login() {
         </div>
 
         <form onSubmit={submit}>
+          {notice && <div className="text-[12.5px] text-emerald-300 mb-3">{notice}</div>}
           <div className="mb-4">
-            <label className="block text-[12.5px] text-slate-300 mb-1.5 font-medium">Email or Username</label>
+            <label className="block text-[12.5px] text-slate-300 mb-1.5 font-medium">Email</label>
             <input value={email} onChange={e => setEmail(e.target.value)} type="text"
               className="w-full px-3 py-2.5 rounded-lg text-sm bg-navy-800 border border-navy-700 text-white placeholder-slate-500"
               placeholder="you@axiomate.com" />

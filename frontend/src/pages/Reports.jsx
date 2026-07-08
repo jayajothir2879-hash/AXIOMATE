@@ -1,0 +1,165 @@
+// src/pages/Reports.jsx
+import React, { useState } from 'react';
+import { supabase } from '../lib/supabaseClient';
+import { toast } from '../components/UI';
+import { Download, FileText, Printer } from 'lucide-react';
+
+export default function Reports() {
+  const [preview, setPreview] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const generatePreview = async () => {
+  setLoading(true);
+
+  try {
+    const { data: projects } = await supabase
+      .from("projects")
+      .select("*");
+
+    const { data: employees } = await supabase
+      .from("employees")
+      .select("*");
+
+    const { data: clients } = await supabase
+      .from("clients")
+      .select("*");
+
+    const completed =
+      projects?.filter(p => p.status === "Completed").length || 0;
+
+    const active =
+      projects?.filter(p => p.status === "Active").length || 0;
+
+    const delayed =
+      projects?.filter(p => p.status === "Delayed").length || 0;
+
+    const highRisk =
+      projects?.filter(p => p.risk_level === "High").length || 0;
+
+    const report = `
+===============================
+      AXIOMATE WEEKLY REPORT
+===============================
+
+Date:
+${new Date().toLocaleDateString()}
+
+PROJECTS
+-------------------------------
+Total Projects      : ${projects?.length || 0}
+Completed Projects  : ${completed}
+Active Projects     : ${active}
+Delayed Projects    : ${delayed}
+
+EMPLOYEES
+-------------------------------
+Total Employees     : ${employees?.length || 0}
+
+CLIENTS
+-------------------------------
+Total Clients       : ${clients?.length || 0}
+
+RISK SUMMARY
+-------------------------------
+High Risk Projects  : ${highRisk}
+
+Generated automatically by AXIOMATE
+`;
+
+    setPreview(report);
+
+    toast("Report generated successfully.");
+
+  } catch (err) {
+    console.error(err);
+    toast("Unable to generate report.");
+  }
+
+  setLoading(false);
+};
+
+  const downloadCSV = async () => {
+
+  const { data: projects } = await supabase
+    .from("projects")
+    .select("*");
+
+  if (!projects) {
+    toast("No data found.");
+    return;
+  }
+
+  const csv = [
+    [
+      "Project",
+      "Client",
+      "Status",
+      "Priority",
+      "Progress"
+    ],
+    ...projects.map(p => [
+      p.project_name,
+      p.client_name,
+      p.status,
+      p.priority,
+      p.progress
+    ])
+  ]
+    .map(row => row.join(","))
+    .join("\n");
+
+  const blob = new Blob([csv], {
+    type: "text/csv"
+  });
+
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement("a");
+
+  a.href = url;
+  a.download = "Axiomate_Report.csv";
+  a.click();
+
+  URL.revokeObjectURL(url);
+
+  toast("CSV downloaded.");
+};
+
+  return (
+    <div>
+      <h2 className="font-display font-bold text-[15px]">Weekly Report Generator</h2>
+      <p className="text-[12.5px] text-slate-500 mb-4">
+        Auto-compiled project summaries, client statistics, employee performance and risk insights — pulled live from the database.
+      </p>
+
+      <div className="bg-white border border-slate-200 rounded-[10px] p-4 shadow-sm mb-4.5 mb-4">
+        <div className="flex justify-between items-center flex-wrap gap-3">
+          <div>
+            <div className="font-semibold text-sm">Generate this week's report</div>
+            <div className="text-[12px] text-slate-500 mt-0.5">Compiles current portfolio data into a downloadable report</div>
+          </div>
+          <div className="flex gap-2.5">
+            <button onClick={downloadCSV} className="flex items-center gap-1.5 px-4 py-2 rounded-lg border border-slate-200 text-sm font-semibold hover:bg-slate-50">
+              <Download size={15} strokeWidth={1.9} /> Download Excel (.csv)
+            </button>
+            <button onClick={generatePreview} disabled={loading} className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-teal text-white text-sm font-semibold hover:bg-teal-light disabled:opacity-60">
+              <FileText size={15} strokeWidth={1.9} /> {loading ? 'Generating…' : 'Generate PDF Report'}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {preview && (
+        <div className="bg-white border border-slate-200 rounded-[10px] p-4 shadow-sm">
+          <div className="flex justify-between items-center">
+            <div className="font-display font-bold text-[15px]">Report Preview</div>
+            <button onClick={() => window.print()} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 text-[12.5px] font-semibold hover:bg-slate-50">
+              <Printer size={14} strokeWidth={1.9} /> Print / Save as PDF
+            </button>
+          </div>
+          <pre className="font-mono-plex text-[12.5px] whitespace-pre-wrap leading-relaxed bg-slate-50 p-4 rounded-lg mt-2.5">{preview}</pre>
+        </div>
+      )}
+    </div>
+  );
+}

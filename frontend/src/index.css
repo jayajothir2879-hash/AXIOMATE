@@ -1,0 +1,14 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html, body, #root { height: 100%; }
+body { font-family: 'Inter', sans-serif; background: #F5F7FA; color: #1B2436; }
+.font-display { font-family: 'Space Grotesk', sans-serif; }
+.font-mono-plex { font-family: 'IBM Plex Mono', monospace; }
+
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-thumb { background: #D8DEE9; border-radius: 8px; }
+
+.notif-scroll { scroll-snap-type: x mandatory; }
+.notif-scroll > * { scroll-snap-align: start; }

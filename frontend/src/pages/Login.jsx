@@ -1,0 +1,64 @@
+// src/pages/Login.jsx
+import React, { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import { Logo } from '../components/Sidebar';
+
+export default function Login() {
+  const [email, setEmail] = useState('admin@axiomate.com');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const { login } = useAuth();
+  const navigate = useNavigate();
+
+  const submit = async (e) => {
+    e.preventDefault();
+    setError(''); setLoading(true);
+    try {
+      await login(email, password);
+      navigate('/dashboard');
+    } catch (err) {
+      setError(err.message || 'Unable to sign in. Check your Supabase project is configured in .env.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen flex items-center justify-center p-6 bg-navy-950"
+      style={{ backgroundImage: 'radial-gradient(circle at 15% 20%, rgba(15,110,124,.35), transparent 45%), radial-gradient(circle at 85% 80%, rgba(226,163,61,.20), transparent 40%)' }}>
+      <div className="w-full max-w-[420px] bg-navy-900 border border-navy-700 rounded-2xl p-8 shadow-2xl">
+        <div className="flex items-center gap-2.5 mb-7">
+          <Logo />
+          <span className="text-white font-bold text-xl font-display">AXIOMATE</span>
+        </div>
+
+        <form onSubmit={submit}>
+          <div className="mb-4">
+            <label className="block text-[12.5px] text-slate-300 mb-1.5 font-medium">Email or Username</label>
+            <input value={email} onChange={e => setEmail(e.target.value)} type="text"
+              className="w-full px-3 py-2.5 rounded-lg text-sm bg-navy-800 border border-navy-700 text-white placeholder-slate-500"
+              placeholder="you@axiomate.com" />
+          </div>
+          <div className="mb-4">
+            <label className="block text-[12.5px] text-slate-300 mb-1.5 font-medium">Password</label>
+            <input value={password} onChange={e => setPassword(e.target.value)} type="password"
+              className="w-full px-3 py-2.5 rounded-lg text-sm bg-navy-800 border border-navy-700 text-white placeholder-slate-500"
+              placeholder="••••••••" />
+          </div>
+          {error && <div className="text-[12.5px] text-red-300 mb-3">{error}</div>}
+          <button disabled={loading} type="submit"
+            className="w-full py-2.5 rounded-lg font-semibold text-sm bg-teal hover:bg-teal-light text-white disabled:opacity-60">
+            {loading ? 'Signing in…' : 'Sign In'}
+          </button>
+        </form>
+
+        <div className="flex justify-between mt-3.5 text-[13px]">
+          <Link to="/forgot-password" className="text-[#7FC8D4]">Forgot password?</Link>
+          <Link to="/signup" className="text-[#7FC8D4]">Create an account</Link>
+        </div>
+      </div>
+    </div>
+  );
+}

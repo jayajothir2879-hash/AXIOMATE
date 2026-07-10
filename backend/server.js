@@ -14,7 +14,6 @@ const dashboardRoutes = require('./routes/dashboardRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
 const worklogRoutes = require('./routes/worklogRoutes');
 const reportRoutes = require('./routes/reportRoutes');
-const assistantRoutes = require('./routes/assistantRoutes');
 
 const app = express();
 
@@ -54,7 +53,6 @@ app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/worklogs', worklogRoutes);
 app.use('/api/reports', reportRoutes);
-app.use('/api/assistant', assistantRoutes);
 
 // 404 handler
 app.use((req, res) => res.status(404).json({ message: 'Route not found.' }));

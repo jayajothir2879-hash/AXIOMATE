@@ -17,7 +17,6 @@ import Employees from './pages/Employees';
 import Clients from './pages/Clients';
 import Risk from './pages/Risk';
 import Effort from './pages/Effort';
-import Assistant from './pages/Assistant';
 import Reports from './pages/Reports';
 import Profile from './pages/Profile';
 import Settings from './pages/Settings';
@@ -41,7 +40,6 @@ export default function App() {
           <Route path="/reports" element={<Reports />} />
           <Route path="/risk" element={<Risk />} />
           <Route path="/effort" element={<Effort />} />
-          <Route path="/assistant" element={<Assistant />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/settings" element={<Settings />} />
         </Route>

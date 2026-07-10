@@ -120,6 +120,59 @@ create table if not exists public.projects (
 );
 
 -- ---------------------------------------------------------------------------
+-- PROJECT OUTCOMES
+-- ---------------------------------------------------------------------------
+create table if not exists public.project_outcomes (
+  id                  bigint generated always as identity primary key,
+  project_id          bigint not null references public.projects(id) on delete cascade,
+  outcome_code        text unique not null,
+  title               text not null,
+  description         text,
+  definition_of_done  text,
+  requested_date      date,
+  tshirt_size         text check (tshirt_size in ('XS','S','M','L','XL','XXL','3XL')),
+  due_date            date,
+  effort_version      text default 'Original',
+  approval_status     text default 'Pending' check (approval_status in ('Pending','Approved','Rejected')),
+  approved_effort     numeric(6,1) default 0,
+  actual_hours        numeric(6,1) default 0,
+  deliverable_status  text default 'Not Started' check (deliverable_status in ('Not Started','In Progress','Done','Blocked')),
+  planned_start       date,
+  forecast_end        date,
+  completion_date     date,
+  is_active           boolean default true,
+  approval_date       date,
+  schedule_status     text default 'On Track' check (schedule_status in ('On Track','At Risk','Delayed')),
+  remaining_hours     numeric(6,1) default 0,
+  eac_hours           numeric(6,1) default 0,
+  percent_complete    int default 0,
+  created_at          timestamptz default now()
+);
+
+-- ---------------------------------------------------------------------------
+-- OUTCOME ACTIVITIES / WBS
+-- ---------------------------------------------------------------------------
+create table if not exists public.outcome_activities (
+  id                     bigint generated always as identity primary key,
+  outcome_id             bigint not null references public.project_outcomes(id) on delete cascade,
+  effort_version         text default 'Original',
+  activity               text not null,
+  application            text,
+  assignee               text,
+  workstream             text,
+  estimated_effort_hours numeric(6,1) default 0,
+  actuals_hours          numeric(6,1) default 0,
+  status                 text default 'Not Started' check (status in ('Not Started','In Progress','Done','Blocked')),
+  planned_start          date,
+  work_days              int default 0,
+  forecast_end           date,
+  completion_date        date,
+  proj_start             date,
+  cum_hours              numeric(6,1) default 0,
+  created_at             timestamptz default now()
+);
+
+-- ---------------------------------------------------------------------------
 -- WORK LOGS
 -- ---------------------------------------------------------------------------
 create table if not exists public.work_logs (
@@ -154,6 +207,8 @@ create table if not exists public.notifications (
 alter table public.clients        enable row level security;
 alter table public.employees      enable row level security;
 alter table public.projects       enable row level security;
+alter table public.project_outcomes enable row level security;
+alter table public.outcome_activities enable row level security;
 alter table public.work_logs      enable row level security;
 alter table public.notifications  enable row level security;
 
@@ -165,6 +220,12 @@ create policy "authenticated write employees" on public.employees for all    to 
 
 create policy "authenticated read projects"   on public.projects  for select to authenticated using (true);
 create policy "authenticated write projects"  on public.projects  for all    to authenticated using (true) with check (true);
+
+create policy "authenticated read outcomes"   on public.project_outcomes for select to authenticated using (true);
+create policy "authenticated write outcomes"  on public.project_outcomes for all    to authenticated using (true) with check (true);
+
+create policy "authenticated read outcome activities"   on public.outcome_activities for select to authenticated using (true);
+create policy "authenticated write outcome activities"  on public.outcome_activities for all    to authenticated using (true) with check (true);
 
 create policy "authenticated read worklogs"   on public.work_logs for select to authenticated using (true);
 create policy "authenticated write worklogs"  on public.work_logs for all    to authenticated using (true) with check (true);

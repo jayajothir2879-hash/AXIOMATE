@@ -82,6 +82,59 @@ CREATE TABLE IF NOT EXISTS projects (
 );
 
 -- ---------------------------------------------------------------------------
+-- PROJECT OUTCOMES
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS project_outcomes (
+  id                 SERIAL PRIMARY KEY,
+  project_id         INT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  outcome_code       VARCHAR(50) UNIQUE NOT NULL,
+  title              VARCHAR(150) NOT NULL,
+  description        TEXT,
+  definition_of_done TEXT,
+  requested_date     DATE,
+  tshirt_size        VARCHAR(5) CHECK (tshirt_size IN ('XS','S','M','L','XL','XXL','3XL')),
+  due_date           DATE,
+  effort_version     VARCHAR(20) DEFAULT 'Original',
+  approval_status    VARCHAR(20) DEFAULT 'Pending' CHECK (approval_status IN ('Pending','Approved','Rejected')),
+  approved_effort    NUMERIC(6,1) DEFAULT 0,
+  actual_hours       NUMERIC(6,1) DEFAULT 0,
+  deliverable_status VARCHAR(20) DEFAULT 'Not Started' CHECK (deliverable_status IN ('Not Started','In Progress','Done','Blocked')),
+  planned_start      DATE,
+  forecast_end       DATE,
+  completion_date    DATE,
+  is_active          BOOLEAN DEFAULT TRUE,
+  approval_date      DATE,
+  schedule_status    VARCHAR(20) DEFAULT 'On Track' CHECK (schedule_status IN ('On Track','At Risk','Delayed')),
+  remaining_hours    NUMERIC(6,1) DEFAULT 0,
+  eac_hours          NUMERIC(6,1) DEFAULT 0,
+  percent_complete   INT DEFAULT 0,
+  created_at         TIMESTAMP DEFAULT NOW()
+);
+
+-- ---------------------------------------------------------------------------
+-- OUTCOME ACTIVITIES / WBS
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS outcome_activities (
+  id                     SERIAL PRIMARY KEY,
+  outcome_id             INT NOT NULL REFERENCES project_outcomes(id) ON DELETE CASCADE,
+  effort_version         VARCHAR(20) DEFAULT 'Original',
+  activity               TEXT NOT NULL,
+  application            VARCHAR(80),
+  assignee               VARCHAR(120),
+  workstream             VARCHAR(50),
+  estimated_effort_hours NUMERIC(6,1) DEFAULT 0,
+  actuals_hours          NUMERIC(6,1) DEFAULT 0,
+  status                 VARCHAR(20) DEFAULT 'Not Started' CHECK (status IN ('Not Started','In Progress','Done','Blocked')),
+  planned_start          DATE,
+  work_days              INT DEFAULT 0,
+  forecast_end           DATE,
+  completion_date        DATE,
+  proj_start             DATE,
+  cum_hours              NUMERIC(6,1) DEFAULT 0,
+  created_at             TIMESTAMP DEFAULT NOW()
+);
+
+-- ---------------------------------------------------------------------------
 -- WORK LOGS  (daily effort tracking)
 -- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS work_logs (

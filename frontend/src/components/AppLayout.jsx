@@ -13,7 +13,7 @@ export default function AppLayout() {
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <div className="flex-1 min-w-0 flex flex-col">
         <Topbar path={location.pathname} onBurger={() => setSidebarOpen(o => !o)} />
-        <div className="p-5 flex-1">
+        <div className="p-5 flex-1 min-w-0 w-full max-w-full">
           <Outlet />
         </div>
       </div>

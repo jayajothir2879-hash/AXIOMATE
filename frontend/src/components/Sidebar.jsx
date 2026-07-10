@@ -4,6 +4,7 @@ import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard, Bell, FolderKanban, Users, Building2,
   ShieldAlert, Clock, Sparkles, FileBarChart2, CircleUserRound, Settings,
+  ClipboardList,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -19,6 +20,7 @@ const NAV = [
     group: 'Manage',
     items: [
       { to: '/projects', label: 'Projects', Icon: FolderKanban, roles: 'all' },
+      { to: '/outcomes', label: 'Outcomes', Icon: ClipboardList, roles: 'all' },
       { to: '/employees', label: 'Employees', Icon: Users, roles: 'all' },
       { to: '/clients', label: 'Clients', Icon: Building2, roles: 'all' },
     ]

@@ -12,6 +12,7 @@ import UpdatePassword from './pages/UpdatePassword';
 import Dashboard from './pages/Dashboard';
 import Notifications from './pages/Notifications';
 import Projects from './pages/Projects';
+import Outcomes from './pages/Outcomes';
 import Employees from './pages/Employees';
 import Clients from './pages/Clients';
 import Risk from './pages/Risk';
@@ -34,6 +35,7 @@ export default function App() {
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/notifications" element={<Notifications />} />
           <Route path="/projects" element={<Projects />} />
+          <Route path="/outcomes" element={<Outcomes />} />
           <Route path="/employees" element={<Employees />} />
           <Route path="/clients" element={<Clients />} />
           <Route path="/reports" element={<Reports />} />

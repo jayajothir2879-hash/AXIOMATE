@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import Modal from '../components/Modal';
 import { Pill, toast } from '../components/UI';
 import { TriangleAlert, TrendingDown, Plus } from 'lucide-react';
+import { supabase } from '../lib/supabaseClient';
 
 export default function Effort() {
   const [logs, setLogs] = useState([]);
@@ -12,37 +13,59 @@ export default function Effort() {
   const [form, setForm] = useState({ employee_id: '', log_date: new Date().toISOString().slice(0, 10), task: '', hours: 8 });
 
   const load = async () => {
-  const { data: logsData } = await supabase
-    .from('worklogs')
-    .select('*');
+    const { data: logsData } = await supabase
+      .from('work_logs')
+      .select('*, employees(name)');
 
-  const { data: employeesData } = await supabase
-    .from('employees')
-    .select('*');
+    const { data: employeesData } = await supabase
+      .from('employees')
+      .select('*');
 
-  setLogs(logsData || []);
-  setEmployees(employeesData || []);
+    const mappedLogs = (logsData || []).map(l => ({
+      ...l,
+      employee_name: l.employees?.name || 'Unknown'
+    }));
 
-  setSummary({
-    overloaded: [],
-    underutilized: [],
-  });
-};
+    setLogs(mappedLogs);
+    setEmployees(employeesData || []);
+
+    const overloaded = (employeesData || []).filter(e => e.workload === 'Overloaded' || Number(e.weekly_hours) > 40);
+    const underutilized = (employeesData || []).filter(e => e.workload === 'Low' || Number(e.weekly_hours) < 18);
+
+    setSummary({
+      overloaded,
+      underutilized,
+    });
+  };
+
+  useEffect(() => {
+    load();
+  }, []);
 
   const save = async () => {
-  const { error } = await supabase
-    .from('worklogs')
-    .insert([form]);
+    if (!form.employee_id) {
+      toast('Please select an employee.');
+      return;
+    }
+    const { error } = await supabase
+      .from('work_logs')
+      .insert([{
+        employee_id: Number(form.employee_id),
+        log_date: form.log_date,
+        task: form.task || 'General work',
+        hours: Number(form.hours)
+      }]);
 
-  if (error) {
-    toast(error.message);
-    return;
-  }
+    if (error) {
+      toast(error.message);
+      return;
+    }
 
-  toast('Work log saved.');
-  setModalOpen(false);
-  load();
-};
+    toast('Work log saved.');
+    setModalOpen(false);
+    load();
+  };
+
 
   return (
     <div>

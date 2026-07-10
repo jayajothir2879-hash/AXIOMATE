@@ -3,40 +3,44 @@ import React, { useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { toast } from '../components/UI';
 import { Download, FileText, Printer } from 'lucide-react';
+import { attachRisk } from '../utils/riskEngine';
 
 export default function Reports() {
   const [preview, setPreview] = useState('');
   const [loading, setLoading] = useState(false);
 
   const generatePreview = async () => {
-  setLoading(true);
+    setLoading(true);
 
-  try {
-    const { data: projects } = await supabase
-      .from("projects")
-      .select("*");
+    try {
+      const { data: projects } = await supabase
+        .from("projects")
+        .select("*, clients(name)");
 
-    const { data: employees } = await supabase
-      .from("employees")
-      .select("*");
+      const { data: employees } = await supabase
+        .from("employees")
+        .select("*");
 
-    const { data: clients } = await supabase
-      .from("clients")
-      .select("*");
+      const { data: clients } = await supabase
+        .from("clients")
+        .select("*");
 
-    const completed =
-      projects?.filter(p => p.status === "Completed").length || 0;
+      const normalized = (projects || []).map(p => ({ ...p, client_name: p.clients?.name || '' }));
+      const projectsWithRisk = attachRisk(normalized, employees || []);
 
-    const active =
-      projects?.filter(p => p.status === "Active").length || 0;
+      const completed =
+        projectsWithRisk.filter(p => p.status === "Completed").length || 0;
 
-    const delayed =
-      projects?.filter(p => p.status === "Delayed").length || 0;
+      const active =
+        projectsWithRisk.filter(p => p.status === "Active").length || 0;
 
-    const highRisk =
-      projects?.filter(p => p.risk_level === "High").length || 0;
+      const delayed =
+        projectsWithRisk.filter(p => p.status === "Delayed").length || 0;
 
-    const report = `
+      const highRisk =
+        projectsWithRisk.filter(p => p.risk?.level === "High").length || 0;
+
+      const report = `
 ===============================
       AXIOMATE WEEKLY REPORT
 ===============================
@@ -46,7 +50,7 @@ ${new Date().toLocaleDateString()}
 
 PROJECTS
 -------------------------------
-Total Projects      : ${projects?.length || 0}
+Total Projects      : ${projectsWithRisk.length}
 Completed Projects  : ${completed}
 Active Projects     : ${active}
 Delayed Projects    : ${delayed}
@@ -66,64 +70,69 @@ High Risk Projects  : ${highRisk}
 Generated automatically by AXIOMATE
 `;
 
-    setPreview(report);
+      setPreview(report);
 
-    toast("Report generated successfully.");
+      toast("Report generated successfully.");
 
-  } catch (err) {
-    console.error(err);
-    toast("Unable to generate report.");
-  }
+    } catch (err) {
+      console.error(err);
+      toast("Unable to generate report.");
+    }
 
-  setLoading(false);
-};
+    setLoading(false);
+  };
 
   const downloadCSV = async () => {
+    try {
+      const { data: projects } = await supabase
+        .from("projects")
+        .select("*, clients(name)");
 
-  const { data: projects } = await supabase
-    .from("projects")
-    .select("*");
+      if (!projects) {
+        toast("No data found.");
+        return;
+      }
 
-  if (!projects) {
-    toast("No data found.");
-    return;
-  }
+      const csv = [
+        [
+          "Project",
+          "Client",
+          "Status",
+          "Priority",
+          "Progress"
+        ],
+        ...projects.map(p => [
+          p.name,
+          p.clients?.name || '',
+          p.status,
+          p.priority,
+          p.progress
+        ])
+      ]
+        .map(row => row.join(","))
+        .join("\n");
 
-  const csv = [
-    [
-      "Project",
-      "Client",
-      "Status",
-      "Priority",
-      "Progress"
-    ],
-    ...projects.map(p => [
-      p.project_name,
-      p.client_name,
-      p.status,
-      p.priority,
-      p.progress
-    ])
-  ]
-    .map(row => row.join(","))
-    .join("\n");
+      const blob = new Blob([csv], {
+        type: "text/csv"
+      });
 
-  const blob = new Blob([csv], {
-    type: "text/csv"
-  });
+      const url = URL.createObjectURL(blob);
 
-  const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
 
-  const a = document.createElement("a");
+      a.href = url;
+      a.download = "Axiomate_Report.csv";
+      a.click();
 
-  a.href = url;
-  a.download = "Axiomate_Report.csv";
-  a.click();
+      URL.revokeObjectURL(url);
 
-  URL.revokeObjectURL(url);
+      toast("CSV downloaded.");
+    } catch (err) {
+      console.error(err);
+      toast("Error downloading CSV.");
+    }
+  };
 
-  toast("CSV downloaded.");
-};
 
   return (
     <div>

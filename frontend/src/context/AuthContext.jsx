@@ -23,10 +23,22 @@ async function loadProfile(authUser) {
       name: authUser.user_metadata?.name || authUser.email,
       email: authUser.email,
       role: authUser.user_metadata?.role || 'Employee',
+      theme: 'light',
+      language: 'English (US)',
+      two_factor: false
     };
   }
 
-  return data;
+  return {
+    ...data,
+    theme: data.theme || 'light',
+    language: data.language || 'English (US)',
+    deadline_reminders: data.deadline_reminders !== false,
+    high_risk_warnings: data.high_risk_warnings !== false,
+    workload_alerts: data.workload_alerts !== false,
+    weekly_report_ready: data.weekly_report_ready || false,
+    login_alerts: data.login_alerts !== false,
+  };
 }
 
 export function AuthProvider({ children }) {
@@ -36,24 +48,50 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       const profile = await loadProfile(session?.user);
+      if (profile) {
+        document.documentElement.classList.toggle('dark', (profile.theme || 'light') === 'dark');
+      }
       setUser(profile);
       setLoading(false);
     });
 
     const { data: listener } = supabase.auth.onAuthStateChange(async (_event, session) => {
       const profile = await loadProfile(session?.user);
+      if (profile) {
+        document.documentElement.classList.toggle('dark', (profile.theme || 'light') === 'dark');
+      }
       setUser(profile);
     });
 
     return () => listener.subscription.unsubscribe();
   }, []);
 
-  const login = async (email, password) => {
+  const login = async (email, password, bypass2FA = false) => {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) throw error;
     const profile = await loadProfile(data.user);
+    
+    if (profile?.two_factor && !bypass2FA) {
+      await supabase.auth.signOut();
+      const api = (await import('../lib/api')).default;
+      await api.post('/auth/send-2fa', { email });
+      return { twoFactorRequired: true };
+    }
+
+    if (profile) {
+      document.documentElement.classList.toggle('dark', (profile.theme || 'light') === 'dark');
+      if (profile.login_alerts !== false) {
+        const api = (await import('../lib/api')).default;
+        api.post('/auth/send-login-alert', { email, userAgent: navigator.userAgent }).catch(console.error);
+      }
+    }
     setUser(profile);
     return profile;
+  };
+
+  const verify2FACode = async (email, code) => {
+    const api = (await import('../lib/api')).default;
+    await api.post('/auth/verify-2fa', { email, code });
   };
 
   const signup = async ({ name, email, password, role }) => {
@@ -78,7 +116,7 @@ export function AuthProvider({ children }) {
   const updateUser = (u) => setUser(u);
 
   const value = useMemo(
-    () => ({ user, loading, login, signup, logout, updateUser }),
+    () => ({ user, loading, login, verify2FACode, signup, logout, updateUser }),
     [user, loading, login, signup, logout, updateUser]
   );
 

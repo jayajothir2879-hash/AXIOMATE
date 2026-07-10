@@ -6,21 +6,22 @@ import { Chart as ChartJS, ArcElement, BarElement, CategoryScale, LinearScale, T
 import { supabase } from '../lib/supabaseClient';
 import { attachRisk } from '../utils/riskEngine';
 import { StatCard } from '../components/UI';
+import { useAuth } from '../context/AuthContext';
 
 ChartJS.register(ArcElement, BarElement, CategoryScale, LinearScale, Tooltip, Legend);
 
 export default function Dashboard() {
+  const { user } = useAuth();
   const [stats, setStats] = useState(null);
   const [notifications, setNotifications] = useState([]);
   const navigate = useNavigate();
 
   useEffect(() => {
     (async () => {
-      const [{ data: projects }, { data: employees }, { data: clients }, { data: notifs }] = await Promise.all([
+      const [{ data: projects }, { data: employees }, { data: clients }] = await Promise.all([
         supabase.from('projects').select('*'),
         supabase.from('employees').select('*'),
         supabase.from('clients').select('id'),
-        supabase.from('notifications').select('*').order('created_at', { ascending: false }).limit(5),
       ]);
 
       const withRisk = attachRisk(projects || [], employees || []);
@@ -30,6 +31,63 @@ export default function Dashboard() {
         statusCounts[p.status] = (statusCounts[p.status] || 0) + 1;
         riskCounts[p.risk.level]++;
       });
+
+      // --- Live Notifications Generator ---
+      let generatedNew = false;
+
+      // 1. Workload Alerts
+      if (user?.deadline_reminders !== false) { // map to matching settings
+        if (user?.workload_alerts !== false) {
+          for (const emp of employees || []) {
+            if (emp.workload === 'Overloaded' || Number(emp.weekly_hours) > 40) {
+              const title = `Workload Alert: ${emp.name}`;
+              const message = `${emp.name} is overloaded with ${emp.weekly_hours} hours/week.`;
+              const { data: exists } = await supabase.from('notifications').select('id').eq('title', title).limit(1);
+              if (!exists || exists.length === 0) {
+                await supabase.from('notifications').insert({ type: 'warn', title, message });
+                generatedNew = true;
+              }
+            }
+          }
+        }
+      }
+
+      // 2. High-Risk Warnings
+      if (user?.high_risk_warnings !== false) {
+        for (const p of withRisk) {
+          if (p.risk.level === 'High') {
+            const title = `High-Risk Alert: ${p.name}`;
+            const message = `${p.name} is classified as High Risk: ${p.risk.reasons.join('; ')}`;
+            const { data: exists } = await supabase.from('notifications').select('id').eq('title', title).limit(1);
+            if (!exists || exists.length === 0) {
+              await supabase.from('notifications').insert({ type: 'risk', title, message });
+              generatedNew = true;
+            }
+          }
+        }
+      }
+
+      // 3. Deadline Reminders
+      if (user?.deadline_reminders !== false) {
+        for (const p of projects || []) {
+          if (p.status !== 'Completed' && p.end_date) {
+            const diffTime = new Date(p.end_date) - new Date();
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            if (diffDays >= 0 && diffDays <= 7) {
+              const title = `Deadline Reminder: ${p.name}`;
+              const message = `${p.name} is approaching its deadline on ${p.end_date}.`;
+              const { data: exists } = await supabase.from('notifications').select('id').eq('title', title).limit(1);
+              if (!exists || exists.length === 0) {
+                await supabase.from('notifications').insert({ type: 'update', title, message });
+                generatedNew = true;
+              }
+            }
+          }
+        }
+      }
+
+      // Fetch latest notifications list
+      const { data: notifs } = await supabase.from('notifications').select('*').order('created_at', { ascending: false }).limit(5);
 
       setStats({
         totalProjects: (projects || []).length,
@@ -44,7 +102,7 @@ export default function Dashboard() {
       });
       setNotifications(notifs || []);
     })();
-  }, []);
+  }, [user]);
 
   if (!stats) return <div className="text-slate-400">Loading dashboard…</div>;
 

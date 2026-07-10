@@ -8,22 +8,45 @@ export default function Login() {
   const location = useLocation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [savedPassword, setSavedPassword] = useState('');
+  const [show2FA, setShow2FA] = useState(false);
+  const [twoFactorCode, setTwoFactorCode] = useState('');
   const [error, setError] = useState('');
   const [notice, setNotice] = useState(location.state?.confirmationNotice || (new URLSearchParams(location.search).get('confirmation') === 'success'
     ? 'Email confirmed. You can sign in now.'
     : ''));
   const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
+  const { login, verify2FACode } = useAuth();
   const navigate = useNavigate();
 
   const submit = async (e) => {
     e.preventDefault();
     setError(''); setNotice(''); setLoading(true);
     try {
-      await login(email, password);
+      const res = await login(email, password);
+      if (res && res.twoFactorRequired) {
+        setSavedPassword(password);
+        setShow2FA(true);
+        setNotice('A 2-step verification code has been sent to your email.');
+        return;
+      }
       navigate('/dashboard');
     } catch (err) {
       setError(err.message || 'Unable to sign in. Check your email and password.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const submit2FA = async (e) => {
+    e.preventDefault();
+    setError(''); setNotice(''); setLoading(true);
+    try {
+      await verify2FACode(email, twoFactorCode);
+      await login(email, savedPassword, true);
+      navigate('/dashboard');
+    } catch (err) {
+      setError(err.response?.data?.message || err.message || 'Invalid verification code.');
     } finally {
       setLoading(false);
     }
@@ -38,26 +61,47 @@ export default function Login() {
           <span className="text-white font-bold text-xl font-display">AXIOMATE</span>
         </div>
 
-        <form onSubmit={submit}>
-          {notice && <div className="text-[12.5px] text-emerald-300 mb-3">{notice}</div>}
-          <div className="mb-4">
-            <label className="block text-[12.5px] text-slate-300 mb-1.5 font-medium">Email</label>
-            <input value={email} onChange={e => setEmail(e.target.value)} type="text"
-              className="w-full px-3 py-2.5 rounded-lg text-sm bg-navy-800 border border-navy-700 text-white placeholder-slate-500"
-              placeholder="you@axiomate.com" />
-          </div>
-          <div className="mb-4">
-            <label className="block text-[12.5px] text-slate-300 mb-1.5 font-medium">Password</label>
-            <input value={password} onChange={e => setPassword(e.target.value)} type="password"
-              className="w-full px-3 py-2.5 rounded-lg text-sm bg-navy-800 border border-navy-700 text-white placeholder-slate-500"
-              placeholder="••••••••" />
-          </div>
-          {error && <div className="text-[12.5px] text-red-300 mb-3">{error}</div>}
-          <button disabled={loading} type="submit"
-            className="w-full py-2.5 rounded-lg font-semibold text-sm bg-teal hover:bg-teal-light text-white disabled:opacity-60">
-            {loading ? 'Signing in…' : 'Sign In'}
-          </button>
-        </form>
+        {show2FA ? (
+          <form onSubmit={submit2FA}>
+            {notice && <div className="text-[12.5px] text-emerald-300 mb-3">{notice}</div>}
+            <div className="mb-4">
+              <label className="block text-[12.5px] text-slate-300 mb-1.5 font-medium">Verification Code</label>
+              <input value={twoFactorCode} onChange={e => setTwoFactorCode(e.target.value)} type="text"
+                className="w-full px-3 py-2.5 rounded-lg text-sm bg-navy-800 border border-navy-700 text-white placeholder-slate-500 text-center tracking-widest font-mono text-lg"
+                placeholder="000000" maxLength={6} />
+            </div>
+            {error && <div className="text-[12.5px] text-red-300 mb-3">{error}</div>}
+            <button disabled={loading} type="submit"
+              className="w-full py-2.5 rounded-lg font-semibold text-sm bg-teal hover:bg-teal-light text-white disabled:opacity-60">
+              {loading ? 'Verifying…' : 'Verify & Sign In'}
+            </button>
+            <button type="button" onClick={() => { setShow2FA(false); setError(''); setNotice(''); }}
+              className="w-full mt-3 py-2.5 rounded-lg font-semibold text-sm border border-navy-700 text-slate-300 hover:bg-navy-800">
+              Back to Login
+            </button>
+          </form>
+        ) : (
+          <form onSubmit={submit}>
+            {notice && <div className="text-[12.5px] text-emerald-300 mb-3">{notice}</div>}
+            <div className="mb-4">
+              <label className="block text-[12.5px] text-slate-300 mb-1.5 font-medium">Email</label>
+              <input value={email} onChange={e => setEmail(e.target.value)} type="text"
+                className="w-full px-3 py-2.5 rounded-lg text-sm bg-navy-800 border border-navy-700 text-white placeholder-slate-500"
+                placeholder="you@axiomate.com" />
+            </div>
+            <div className="mb-4">
+              <label className="block text-[12.5px] text-slate-300 mb-1.5 font-medium">Password</label>
+              <input value={password} onChange={e => setPassword(e.target.value)} type="password"
+                className="w-full px-3 py-2.5 rounded-lg text-sm bg-navy-800 border border-navy-700 text-white placeholder-slate-500"
+                placeholder="••••••••" />
+            </div>
+            {error && <div className="text-[12.5px] text-red-300 mb-3">{error}</div>}
+            <button disabled={loading} type="submit"
+              className="w-full py-2.5 rounded-lg font-semibold text-sm bg-teal hover:bg-teal-light text-white disabled:opacity-60">
+              {loading ? 'Signing in…' : 'Sign In'}
+            </button>
+          </form>
+        )}
 
         <div className="flex justify-between mt-3.5 text-[13px]">
           <Link to="/forgot-password" className="text-[#7FC8D4]">Forgot password?</Link>

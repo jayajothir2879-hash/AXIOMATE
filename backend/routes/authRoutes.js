@@ -11,5 +11,8 @@ router.post('/reset-password', ctrl.resetPassword);
 router.get('/me', protect, ctrl.me);
 router.put('/me', protect, ctrl.updateMe);
 router.put('/change-password', protect, ctrl.changePassword);
+router.post('/send-2fa', ctrl.send2FA);
+router.post('/verify-2fa', ctrl.verify2FA);
+router.post('/send-login-alert', ctrl.sendLoginAlert);
 
 module.exports = router;

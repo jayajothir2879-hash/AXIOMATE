@@ -4,8 +4,10 @@ import { supabase } from '../lib/supabaseClient';
 import { toast } from '../components/UI';
 import { Download, FileText, Printer } from 'lucide-react';
 import { attachRisk } from '../utils/riskEngine';
+import { useAuth } from '../context/AuthContext';
 
 export default function Reports() {
+  const { user } = useAuth();
   const [preview, setPreview] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -13,17 +15,20 @@ export default function Reports() {
     setLoading(true);
 
     try {
-      const { data: projects } = await supabase
+      const { data: projects, error: projectsError } = await supabase
         .from("projects")
         .select("*, clients(name)");
+      if (projectsError) throw projectsError;
 
-      const { data: employees } = await supabase
+      const { data: employees, error: employeesError } = await supabase
         .from("employees")
         .select("*");
+      if (employeesError) throw employeesError;
 
-      const { data: clients } = await supabase
+      const { data: clients, error: clientsError } = await supabase
         .from("clients")
         .select("*");
+      if (clientsError) throw clientsError;
 
       const normalized = (projects || []).map(p => ({ ...p, client_name: p.clients?.name || '' }));
       const projectsWithRisk = attachRisk(normalized, employees || []);
@@ -72,11 +77,19 @@ Generated automatically by AXIOMATE
 
       setPreview(report);
 
+      if (user?.weekly_report_ready !== false) {
+        await supabase.from('notifications').insert({
+          type: 'update',
+          title: 'Weekly Report Ready',
+          message: `A new weekly project status report has been successfully generated.`
+        });
+      }
+
       toast("Report generated successfully.");
 
     } catch (err) {
       console.error(err);
-      toast("Unable to generate report.");
+      toast("Unable to generate report: " + err.message);
     }
 
     setLoading(false);
@@ -84,11 +97,13 @@ Generated automatically by AXIOMATE
 
   const downloadCSV = async () => {
     try {
-      const { data: projects } = await supabase
+      const { data: projects, error } = await supabase
         .from("projects")
         .select("*, clients(name)");
 
-      if (!projects) {
+      if (error) throw error;
+
+      if (!projects || projects.length === 0) {
         toast("No data found.");
         return;
       }
@@ -129,7 +144,7 @@ Generated automatically by AXIOMATE
       toast("CSV downloaded.");
     } catch (err) {
       console.error(err);
-      toast("Error downloading CSV.");
+      toast("Error downloading CSV: " + err.message);
     }
   };
 

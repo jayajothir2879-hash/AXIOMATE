@@ -7,6 +7,7 @@ import {
   ClipboardList,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { t } from '../utils/i18n';
 
 const NAV = [
   {
@@ -30,7 +31,6 @@ const NAV = [
     items: [
       { to: '/risk', label: 'Risk Prediction', Icon: ShieldAlert, roles: 'all' },
       { to: '/effort', label: 'Effort Tracking', Icon: Clock, roles: 'all' },
-      { to: '/assistant', label: 'AI Assistant', Icon: Sparkles, roles: 'all' },
       { to: '/reports', label: 'Reports', Icon: FileBarChart2, roles: 'all' },
     ]
   },
@@ -56,7 +56,7 @@ export default function Sidebar({ open, onClose }) {
       {NAV.map((section, i) => (
         <div key={i} className="mb-1">
           {section.group && (
-            <div className="text-[10.5px] uppercase tracking-wider text-slate-500 mt-4 mb-1.5 px-2.5">{section.group}</div>
+            <div className="text-[10.5px] uppercase tracking-wider text-slate-500 mt-4 mb-1.5 px-2.5">{t(section.group, user?.language)}</div>
           )}
           {section.items.map(({ to, label, Icon }) => (
               <NavLink
@@ -70,7 +70,7 @@ export default function Sidebar({ open, onClose }) {
                 }
               >
                 <Icon size={17} strokeWidth={2} className="flex-none" />
-                {label}
+                {t(label, user?.language)}
               </NavLink>
             ))}
         </div>

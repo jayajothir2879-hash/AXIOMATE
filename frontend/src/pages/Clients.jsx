@@ -5,6 +5,7 @@ import Modal from '../components/Modal';
 import { Pill, riskTone, toast } from '../components/UI';
 import { useAuth } from '../context/AuthContext';
 import { Pencil, Trash2, Plus } from 'lucide-react';
+import { filterProjects, filterEmployees } from '../utils/authFilters';
 
 const EMPTY = {
   client_name: '',
@@ -27,14 +28,25 @@ export default function Clients() {
   const [editingId, setEditingId] = useState(null);
   const canEdit = true;
 
-  const load = () => supabase.from('clients').select('*').order('id').then(({ data }) => {
-    const mapped = (data || []).map(c => ({
-      ...c,
-      client_name: c.name,
-      company_name: c.company
-    }));
+  const load = async () => {
+    const [{ data: clientsData }, { data: projectsData }, { data: employeesData }] = await Promise.all([
+      supabase.from('clients').select('*').order('id'),
+      supabase.from('projects').select('client_id, assigned_employees'),
+      supabase.from('employees').select('*, profiles(role)'),
+    ]);
+
+    const visibleProjects = filterProjects(projectsData || [], employeesData || [], user);
+    const visibleClientIds = new Set(visibleProjects.map(p => p.client_id).filter(Boolean));
+
+    const mapped = (clientsData || [])
+      .filter(c => user.role === 'Admin' || visibleClientIds.has(c.id))
+      .map(c => ({
+        ...c,
+        client_name: c.name,
+        company_name: c.company
+      }));
     setRows(mapped);
-  });
+  };
   useEffect(() => { load(); }, []);
 
   const filtered = useMemo(() =>

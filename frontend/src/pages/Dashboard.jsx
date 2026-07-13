@@ -7,6 +7,7 @@ import { supabase } from '../lib/supabaseClient';
 import { attachRisk } from '../utils/riskEngine';
 import { StatCard } from '../components/UI';
 import { useAuth } from '../context/AuthContext';
+import { filterEmployees, filterProjects, filterNotifications } from '../utils/authFilters';
 
 ChartJS.register(ArcElement, BarElement, CategoryScale, LinearScale, Tooltip, Legend);
 
@@ -20,16 +21,21 @@ export default function Dashboard() {
     (async () => {
       const [{ data: projects }, { data: employees }, { data: clients }] = await Promise.all([
         supabase.from('projects').select('*'),
-        supabase.from('employees').select('*'),
+        supabase.from('employees').select('*, profiles(role)'),
         supabase.from('clients').select('id'),
       ]);
 
-      const withRisk = attachRisk(projects || [], employees || []);
+      const visibleEmployees = filterEmployees(employees || [], user);
+      const visibleProjects = filterProjects(projects || [], employees || [], user);
+      const withRisk = attachRisk(visibleProjects, employees || []);
+
       const statusCounts = { Active: 0, Completed: 0, Delayed: 0, 'On Hold': 0 };
       const riskCounts = { Low: 0, Medium: 0, High: 0 };
       withRisk.forEach((p) => {
         statusCounts[p.status] = (statusCounts[p.status] || 0) + 1;
-        riskCounts[p.risk.level]++;
+        if (p.risk && p.risk.level) {
+          riskCounts[p.risk.level] = (riskCounts[p.risk.level] || 0) + 1;
+        }
       });
 
       // --- Live Notifications Generator ---
@@ -38,7 +44,7 @@ export default function Dashboard() {
       // 1. Workload Alerts
       if (user?.deadline_reminders !== false) { // map to matching settings
         if (user?.workload_alerts !== false) {
-          for (const emp of employees || []) {
+          for (const emp of visibleEmployees || []) {
             if (emp.workload === 'Overloaded' || Number(emp.weekly_hours) > 40) {
               const title = `Workload Alert: ${emp.name}`;
               const message = `${emp.name} is overloaded with ${emp.weekly_hours} hours/week.`;
@@ -69,7 +75,7 @@ export default function Dashboard() {
 
       // 3. Deadline Reminders
       if (user?.deadline_reminders !== false) {
-        for (const p of projects || []) {
+        for (const p of visibleProjects || []) {
           if (p.status !== 'Completed' && p.end_date) {
             const diffTime = new Date(p.end_date) - new Date();
             const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
@@ -87,20 +93,24 @@ export default function Dashboard() {
       }
 
       // Fetch latest notifications list
-      const { data: notifs } = await supabase.from('notifications').select('*').order('created_at', { ascending: false }).limit(5);
+      const { data: notifs } = await supabase.from('notifications').select('*').order('created_at', { ascending: false }).limit(100);
+      const filteredNotifs = filterNotifications(notifs || [], visibleProjects, visibleEmployees);
+
+      const visibleClientIds = new Set(visibleProjects.map(p => p.client_id).filter(Boolean));
+      const totalClientsCount = (clients || []).filter(c => visibleClientIds.has(c.id)).length;
 
       setStats({
-        totalProjects: (projects || []).length,
+        totalProjects: visibleProjects.length,
         activeProjects: statusCounts.Active,
         completedProjects: statusCounts.Completed,
         delayedProjects: statusCounts.Delayed,
         highRiskProjects: riskCounts.High,
-        totalClients: (clients || []).length,
-        totalEmployees: (employees || []).length,
+        totalClients: user.role === 'Admin' ? (clients || []).length : totalClientsCount,
+        totalEmployees: visibleEmployees.length,
         statusCounts,
         riskCounts,
       });
-      setNotifications(notifs || []);
+      setNotifications(filteredNotifs.slice(0, 5));
     })();
   }, [user]);
 
@@ -109,14 +119,14 @@ export default function Dashboard() {
   const goToProjects = (status) => () => navigate('/projects', { state: { statusFilter: status } });
 
   const cards = [
-    { label: 'Total Projects', value: stats.totalProjects, accent: '#3E6FD9', onClick: () => navigate('/projects') },
-    { label: 'Active Projects', value: stats.activeProjects, accent: '#0F6E7C', onClick: goToProjects('Active') },
-    { label: 'Completed Projects', value: stats.completedProjects, accent: '#2E9E5B', onClick: goToProjects('Completed') },
-    { label: 'Delayed Projects', value: stats.delayedProjects, accent: '#D5514C', onClick: goToProjects('Delayed') },
-    { label: 'High-Risk Projects', value: stats.highRiskProjects, accent: '#E2A33D', onClick: () => navigate('/risk') },
-    { label: 'Total Clients', value: stats.totalClients, accent: '#7C5CD9', onClick: () => navigate('/clients') },
-    { label: 'Total Employees', value: stats.totalEmployees, accent: '#1B2436', onClick: () => navigate('/employees') },
-  ];
+    { label: 'Total Projects', value: stats.totalProjects, accent: '#3E6FD9', onClick: () => navigate('/projects'), roles: ['Admin', 'Project Manager', 'Employee'] },
+    { label: 'Active Projects', value: stats.activeProjects, accent: '#0F6E7C', onClick: goToProjects('Active'), roles: ['Admin', 'Project Manager', 'Employee'] },
+    { label: 'Completed Projects', value: stats.completedProjects, accent: '#2E9E5B', onClick: goToProjects('Completed'), roles: ['Admin', 'Project Manager', 'Employee'] },
+    { label: 'Delayed Projects', value: stats.delayedProjects, accent: '#D5514C', onClick: goToProjects('Delayed'), roles: ['Admin', 'Project Manager', 'Employee'] },
+    { label: 'High-Risk Projects', value: stats.highRiskProjects, accent: '#E2A33D', onClick: () => navigate('/risk'), roles: ['Admin', 'Project Manager'] },
+    { label: 'Total Clients', value: stats.totalClients, accent: '#7C5CD9', onClick: () => navigate('/clients'), roles: ['Admin', 'Project Manager'] },
+    { label: 'Total Employees', value: stats.totalEmployees, accent: '#1B2436', onClick: () => navigate('/employees'), roles: ['Admin', 'Project Manager', 'Employee'] },
+  ].filter(c => c.roles.includes(user?.role));
 
   const statusData = {
     labels: Object.keys(stats.statusCounts),

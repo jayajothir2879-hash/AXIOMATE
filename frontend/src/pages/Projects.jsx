@@ -7,6 +7,7 @@ import Modal from '../components/Modal';
 import { Pill, riskTone, statusTone, priorityTone, toast } from '../components/UI';
 import { useAuth } from '../context/AuthContext';
 import { Pencil, Trash2, Plus } from 'lucide-react';
+import { filterProjects } from '../utils/authFilters';
 
 const EMPTY = { name: '', client_id: '', start_date: '', end_date: '', progress: 0, priority: 'Medium', status: 'Active', assigned_employees: '', remarks: '' };
 
@@ -22,16 +23,17 @@ export default function Projects() {
   const [form, setForm] = useState(EMPTY);
   const [editingId, setEditingId] = useState(null);
 
-  const canEdit = true;
+  const canEdit = user?.role === 'Admin' || user?.role === 'Project Manager';
 
   const load = async () => {
     const [{ data: projectRows }, { data: employeeRows }, { data: clientRows }] = await Promise.all([
       supabase.from('projects').select('*, clients(name)').order('id'),
-      supabase.from('employees').select('*'),
+      supabase.from('employees').select('*, profiles(role)'),
       supabase.from('clients').select('*').order('name'),
     ]);
     const normalized = (projectRows || []).map(p => ({ ...p, client_name: p.clients?.name || '' }));
-    setProjects(attachRisk(normalized, employeeRows || []));
+    const visibleProjects = filterProjects(normalized, employeeRows || [], user);
+    setProjects(attachRisk(visibleProjects, employeeRows || []));
     setClients(clientRows || []);
   };
   useEffect(() => { load(); }, []);

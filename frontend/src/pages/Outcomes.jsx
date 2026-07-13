@@ -3,6 +3,8 @@ import { ClipboardList, Pencil, Plus, Target, Trash2 } from 'lucide-react';
 import Modal from '../components/Modal';
 import { Pill, StatCard, toast } from '../components/UI';
 import { supabase } from '../lib/supabaseClient';
+import { useAuth } from '../context/AuthContext';
+import { filterProjects } from '../utils/authFilters';
 
 const SHIRT_SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL'];
 const APPROVAL_STATUSES = ['Pending', 'Approved', 'Rejected'];
@@ -140,6 +142,7 @@ const calculateOutcomeRollup = (outcome, outcomeActivities) => {
 };
 
 export default function Outcomes() {
+  const { user } = useAuth();
   const [projects, setProjects] = useState([]);
   const [outcomes, setOutcomes] = useState([]);
   const [activities, setActivities] = useState([]);
@@ -155,15 +158,24 @@ export default function Outcomes() {
   const [activityForm, setActivityForm] = useState(EMPTY_ACTIVITY);
 
   const load = async () => {
-    const [{ data: projectRows }, { data: outcomeRows }, { data: activityRows }] = await Promise.all([
-      supabase.from('projects').select('id, name, project_code').order('name'),
+    const [{ data: projectRows }, { data: outcomeRows }, { data: activityRows }, { data: employeeRows }] = await Promise.all([
+      supabase.from('projects').select('id, name, project_code, assigned_employees').order('name'),
       supabase.from('project_outcomes').select('*').order('created_at', { ascending: false }),
       supabase.from('outcome_activities').select('*').order('created_at', { ascending: false }),
+      supabase.from('employees').select('*, profiles(role)'),
     ]);
 
-    setProjects(projectRows || []);
-    setOutcomes(outcomeRows || []);
-    setActivities(activityRows || []);
+    const visibleProjects = filterProjects(projectRows || [], employeeRows || [], user);
+    const visibleProjectIds = new Set(visibleProjects.map(p => p.id));
+
+    const visibleOutcomes = (outcomeRows || []).filter(o => visibleProjectIds.has(o.project_id));
+    const visibleOutcomeIds = new Set(visibleOutcomes.map(o => o.id));
+
+    const visibleActivities = (activityRows || []).filter(a => visibleOutcomeIds.has(a.outcome_id));
+
+    setProjects(visibleProjects);
+    setOutcomes(visibleOutcomes);
+    setActivities(visibleActivities);
   };
 
   useEffect(() => { load(); }, []);

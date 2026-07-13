@@ -36,9 +36,9 @@ export default function App() {
           <Route path="/projects" element={<Projects />} />
           <Route path="/outcomes" element={<Outcomes />} />
           <Route path="/employees" element={<Employees />} />
-          <Route path="/clients" element={<Clients />} />
-          <Route path="/reports" element={<Reports />} />
-          <Route path="/risk" element={<Risk />} />
+          <Route path="/clients" element={<ProtectedRoute roles={['Admin', 'Project Manager']}><Clients /></ProtectedRoute>} />
+          <Route path="/reports" element={<ProtectedRoute roles={['Admin', 'Project Manager']}><Reports /></ProtectedRoute>} />
+          <Route path="/risk" element={<ProtectedRoute roles={['Admin', 'Project Manager']}><Risk /></ProtectedRoute>} />
           <Route path="/effort" element={<Effort />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/settings" element={<Settings />} />

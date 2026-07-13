@@ -13,32 +13,32 @@ const NAV = [
   {
     group: null,
     items: [
-      { to: '/dashboard', label: 'Dashboard', Icon: LayoutDashboard, roles: 'all' },
-      { to: '/notifications', label: 'Notifications', Icon: Bell, roles: 'all' },
+      { to: '/dashboard', label: 'Dashboard', Icon: LayoutDashboard, roles: ['Admin', 'Project Manager', 'Employee'] },
+      { to: '/notifications', label: 'Notifications', Icon: Bell, roles: ['Admin', 'Project Manager', 'Employee'] },
     ]
   },
   {
     group: 'Manage',
     items: [
-      { to: '/projects', label: 'Projects', Icon: FolderKanban, roles: 'all' },
-      { to: '/outcomes', label: 'Outcomes', Icon: ClipboardList, roles: 'all' },
-      { to: '/employees', label: 'Employees', Icon: Users, roles: 'all' },
-      { to: '/clients', label: 'Clients', Icon: Building2, roles: 'all' },
+      { to: '/projects', label: 'Projects', Icon: FolderKanban, roles: ['Admin', 'Project Manager', 'Employee'] },
+      { to: '/outcomes', label: 'Outcomes', Icon: ClipboardList, roles: ['Admin', 'Project Manager', 'Employee'] },
+      { to: '/employees', label: 'Employees', Icon: Users, roles: ['Admin', 'Project Manager', 'Employee'] },
+      { to: '/clients', label: 'Clients', Icon: Building2, roles: ['Admin', 'Project Manager'] },
     ]
   },
   {
     group: 'Intelligence',
     items: [
-      { to: '/risk', label: 'Risk Prediction', Icon: ShieldAlert, roles: 'all' },
-      { to: '/effort', label: 'Effort Tracking', Icon: Clock, roles: 'all' },
-      { to: '/reports', label: 'Reports', Icon: FileBarChart2, roles: 'all' },
+      { to: '/risk', label: 'Risk Prediction', Icon: ShieldAlert, roles: ['Admin', 'Project Manager'] },
+      { to: '/effort', label: 'Effort Tracking', Icon: Clock, roles: ['Admin', 'Project Manager', 'Employee'] },
+      { to: '/reports', label: 'Reports', Icon: FileBarChart2, roles: ['Admin', 'Project Manager'] },
     ]
   },
   {
     group: 'Account',
     items: [
-      { to: '/profile', label: 'Profile', Icon: CircleUserRound, roles: 'all' },
-      { to: '/settings', label: 'Settings', Icon: Settings, roles: 'all' },
+      { to: '/profile', label: 'Profile', Icon: CircleUserRound, roles: ['Admin', 'Project Manager', 'Employee'] },
+      { to: '/settings', label: 'Settings', Icon: Settings, roles: ['Admin', 'Project Manager', 'Employee'] },
     ]
   },
 ];
@@ -53,12 +53,16 @@ export default function Sidebar({ open, onClose }) {
         <span className="text-white font-bold text-[16.5px] font-display tracking-tight">AXIOMATE</span>
       </div>
 
-      {NAV.map((section, i) => (
-        <div key={i} className="mb-1">
-          {section.group && (
-            <div className="text-[10.5px] uppercase tracking-wider text-slate-500 mt-4 mb-1.5 px-2.5">{t(section.group, user?.language)}</div>
-          )}
-          {section.items.map(({ to, label, Icon }) => (
+      {NAV.map((section, i) => {
+        const visibleItems = section.items.filter(item => !item.roles || item.roles.includes(user?.role));
+        if (visibleItems.length === 0) return null;
+
+        return (
+          <div key={i} className="mb-1">
+            {section.group && (
+              <div className="text-[10.5px] uppercase tracking-wider text-slate-500 mt-4 mb-1.5 px-2.5">{t(section.group, user?.language)}</div>
+            )}
+            {visibleItems.map(({ to, label, Icon }) => (
               <NavLink
                 key={to}
                 to={to}
@@ -73,8 +77,9 @@ export default function Sidebar({ open, onClose }) {
                 {t(label, user?.language)}
               </NavLink>
             ))}
-        </div>
-      ))}
+          </div>
+        );
+      })}
 
       <div className="mt-auto pt-3.5 border-t border-navy-800 text-[11.5px] text-slate-500">
         AXIOMATE<br />v1.0 · Connected to API

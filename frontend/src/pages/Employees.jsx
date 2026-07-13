@@ -5,6 +5,7 @@ import Modal from '../components/Modal';
 import { Pill, riskTone, toast } from '../components/UI';
 import { useAuth } from '../context/AuthContext';
 import { Pencil, Trash2, Plus } from 'lucide-react';
+import { filterEmployees } from '../utils/authFilters';
 
 const EMPTY = { name: '', email: '', phone: '', department: '', designation: '', assigned_projects: '', daily_hours: 0, weekly_hours: 0, productivity_score: 0, workload: 'Low' };
 
@@ -20,7 +21,9 @@ export default function Employees() {
   const canEdit = user?.role === 'Admin' || user?.role === 'Project Manager';
   const canDelete = user?.role === 'Admin';
 
-  const load = () => supabase.from('employees').select('*').order('id').then(({ data }) => setRows(data || []));
+  const load = () => supabase.from('employees').select('*, profiles(role)').order('id').then(({ data }) => {
+    setRows(filterEmployees(data || [], user));
+  });
   useEffect(() => { load(); }, []);
 
   const filtered = useMemo(() => rows.filter(e => !q || e.name.toLowerCase().includes(q.toLowerCase()) || (e.department || '').toLowerCase().includes(q.toLowerCase())), [rows, q]);

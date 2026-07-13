@@ -5,6 +5,7 @@ import { toast } from '../components/UI';
 import { Download, FileText, Printer } from 'lucide-react';
 import { attachRisk } from '../utils/riskEngine';
 import { useAuth } from '../context/AuthContext';
+import { filterProjects, filterEmployees } from '../utils/authFilters';
 
 export default function Reports() {
   const { user } = useAuth();
@@ -22,7 +23,7 @@ export default function Reports() {
 
       const { data: employees, error: employeesError } = await supabase
         .from("employees")
-        .select("*");
+        .select("*, profiles(role)");
       if (employeesError) throw employeesError;
 
       const { data: clients, error: clientsError } = await supabase
@@ -31,7 +32,12 @@ export default function Reports() {
       if (clientsError) throw clientsError;
 
       const normalized = (projects || []).map(p => ({ ...p, client_name: p.clients?.name || '' }));
-      const projectsWithRisk = attachRisk(normalized, employees || []);
+      const visibleEmployees = filterEmployees(employees || [], user);
+      const visibleProjects = filterProjects(normalized, employees || [], user);
+      const projectsWithRisk = attachRisk(visibleProjects, employees || []);
+
+      const visibleClientIds = new Set(visibleProjects.map(p => p.client_id).filter(Boolean));
+      const visibleClients = (clients || []).filter(c => visibleClientIds.has(c.id));
 
       const completed =
         projectsWithRisk.filter(p => p.status === "Completed").length || 0;
@@ -62,11 +68,11 @@ Delayed Projects    : ${delayed}
 
 EMPLOYEES
 -------------------------------
-Total Employees     : ${employees?.length || 0}
+Total Employees     : ${visibleEmployees.length}
 
 CLIENTS
 -------------------------------
-Total Clients       : ${clients?.length || 0}
+Total Clients       : ${visibleClients.length}
 
 RISK SUMMARY
 -------------------------------
@@ -97,13 +103,17 @@ Generated automatically by AXIOMATE
 
   const downloadCSV = async () => {
     try {
-      const { data: projects, error } = await supabase
-        .from("projects")
-        .select("*, clients(name)");
+      const [{ data: projects, error: projectsError }, { data: employees, error: employeesError }] = await Promise.all([
+        supabase.from("projects").select("*, clients(name)"),
+        supabase.from("employees").select("*, profiles(role)"),
+      ]);
 
-      if (error) throw error;
+      if (projectsError) throw projectsError;
+      if (employeesError) throw employeesError;
 
-      if (!projects || projects.length === 0) {
+      const visibleProjects = filterProjects(projects || [], employees || [], user);
+
+      if (!visibleProjects || visibleProjects.length === 0) {
         toast("No data found.");
         return;
       }
@@ -116,7 +126,7 @@ Generated automatically by AXIOMATE
           "Priority",
           "Progress"
         ],
-        ...projects.map(p => [
+        ...visibleProjects.map(p => [
           p.name,
           p.clients?.name || '',
           p.status,

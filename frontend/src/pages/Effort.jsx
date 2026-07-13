@@ -4,8 +4,11 @@ import Modal from '../components/Modal';
 import { Pill, toast } from '../components/UI';
 import { TriangleAlert, TrendingDown, Plus } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
+import { useAuth } from '../context/AuthContext';
+import { filterEmployees } from '../utils/authFilters';
 
 export default function Effort() {
+  const { user } = useAuth();
   const [logs, setLogs] = useState([]);
   const [employees, setEmployees] = useState([]);
   const [summary, setSummary] = useState({ overloaded: [], underutilized: [] });
@@ -19,18 +22,23 @@ export default function Effort() {
 
     const { data: employeesData } = await supabase
       .from('employees')
-      .select('*');
+      .select('*, profiles(role)');
 
-    const mappedLogs = (logsData || []).map(l => ({
-      ...l,
-      employee_name: l.employees?.name || 'Unknown'
-    }));
+    const visibleEmployees = filterEmployees(employeesData || [], user);
+    const visibleEmpIds = new Set(visibleEmployees.map(e => e.id));
+
+    const mappedLogs = (logsData || [])
+      .filter(l => visibleEmpIds.has(l.employee_id))
+      .map(l => ({
+        ...l,
+        employee_name: l.employees?.name || 'Unknown'
+      }));
 
     setLogs(mappedLogs);
-    setEmployees(employeesData || []);
+    setEmployees(visibleEmployees);
 
-    const overloaded = (employeesData || []).filter(e => e.workload === 'Overloaded' || Number(e.weekly_hours) > 40);
-    const underutilized = (employeesData || []).filter(e => e.workload === 'Low' || Number(e.weekly_hours) < 18);
+    const overloaded = visibleEmployees.filter(e => e.workload === 'Overloaded' || Number(e.weekly_hours) > 40);
+    const underutilized = visibleEmployees.filter(e => e.workload === 'Low' || Number(e.weekly_hours) < 18);
 
     setSummary({
       overloaded,

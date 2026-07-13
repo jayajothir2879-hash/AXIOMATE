@@ -32,7 +32,11 @@ export default function Login() {
       }
       navigate('/dashboard');
     } catch (err) {
-      setError(err.message || 'Unable to sign in. Check your email and password.');
+      let msg = err.message || 'Unable to sign in. Check your email and password.';
+      if (msg === '{}' || msg === '[]') {
+        msg = 'Unable to sign in. Check your network connection or try again.';
+      }
+      setError(msg);
     } finally {
       setLoading(false);
     }
@@ -46,7 +50,11 @@ export default function Login() {
       await login(email, savedPassword, true);
       navigate('/dashboard');
     } catch (err) {
-      setError(err.response?.data?.message || err.message || 'Invalid verification code.');
+      let msg = err.response?.data?.message || err.message || 'Invalid verification code.';
+      if (msg === '{}' || msg === '[]') {
+        msg = 'Invalid verification code. Please try again.';
+      }
+      setError(msg);
     } finally {
       setLoading(false);
     }

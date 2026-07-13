@@ -43,9 +43,11 @@ language plpgsql
 security definer set search_path = public
 as $$
 declare
+  next_val integer;
   next_code text;
 begin
-  select 'EMP-' || lpad((count(*) + 1)::text, 3, '0') into next_code from public.profiles;
+  select coalesce(max(substring(emp_code from '\d+')::integer), 0) + 1 into next_val from public.profiles;
+  next_code := 'EMP-' || lpad(next_val::text, 3, '0');
   insert into public.profiles (id, emp_code, name, email, role)
   values (
     new.id,
@@ -57,6 +59,7 @@ begin
   return new;
 end;
 $$;
+
 
 drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created

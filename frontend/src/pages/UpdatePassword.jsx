@@ -32,7 +32,14 @@ export default function UpdatePassword() {
     if (password.length < 6) { setMsg('Password must be at least 6 characters.'); return; }
     if (password !== confirm) { setMsg('Passwords do not match.'); return; }
     const { error } = await supabase.auth.updateUser({ password });
-    if (error) { setMsg(error.message); return; }
+    if (error) {
+      let msg = error.message || 'Unable to update password.';
+      if (msg === '{}' || msg === '[]') {
+        msg = 'Unable to update password. Please try again.';
+      }
+      setMsg(msg);
+      return;
+    }
     setDone(true);
     setTimeout(() => navigate('/login'), 1800);
   };

@@ -25,7 +25,11 @@ export default function ForgotPassword() {
       if (error) throw error;
       setSent(true);
     } catch (err) {
-      setMsg(err.message || 'Something went wrong.');
+      let msg = err.message || 'Something went wrong.';
+      if (msg === '{}' || msg === '[]') {
+        msg = 'Unable to request password reset. Please check your connection and try again.';
+      }
+      setMsg(msg);
     } finally {
       setLoading(false);
     }

@@ -30,7 +30,11 @@ export default function Signup() {
         navigate('/login', { state: { confirmationNotice: 'Account created. Check your email for the confirmation link before signing in.' } });
       }
     } catch (err) {
-      setError(err.message || 'Unable to create account.');
+      let msg = err.message || 'Unable to create account.';
+      if (msg === '{}' || msg === '[]') {
+        msg = 'Unable to create account. Please check your database connection or try again.';
+      }
+      setError(msg);
     } finally {
       setLoading(false);
     }

@@ -141,9 +141,9 @@ export default function Dashboard() {
   const currentRole = user?.role || 'Employee';
 
   const rolesList = [
-    { value: 'Admin', label: 'Admin (Full Access)' },
-    { value: 'Project Manager', label: 'Project Manager (Management Access)' },
-    { value: 'Employee', label: 'Employee (Standard Access)' }
+    { value: 'Admin', label: 'Admin' },
+    { value: 'Project Manager', label: 'Project Manager' },
+    { value: 'Employee', label: 'Employee' }
   ];
 
   const isRoleAllowed = (roleVal) => {
@@ -182,14 +182,11 @@ export default function Dashboard() {
             </svg>
           </div>
           <div>
-            <h2 className="text-[14.5px] font-semibold text-slate-800">Workspace Authority Switcher</h2>
-            <p className="text-[12px] text-slate-500">
-              Simulate views for different roles. Original Role: <span className="font-semibold text-teal">{originalRole}</span>
-            </p>
+            <h2 className="text-[14.5px] font-semibold text-slate-800">Role Switcher</h2>
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <label htmlFor="role-select" className="text-[12.5px] font-medium text-slate-600">Simulate As:</label>
+          <label htmlFor="role-select" className="text-[12.5px] font-medium text-slate-600">Select Role:</label>
           <div className="relative">
             <select
               id="role-select"

@@ -17,27 +17,26 @@ async function loadProfile(authUser) {
     console.error('Could not load profile:', error.message);
   }
 
-  if (!data) {
-    return {
-      id: authUser.id,
-      name: authUser.user_metadata?.name || authUser.email,
-      email: authUser.email,
-      role: authUser.user_metadata?.role || 'Employee',
-      theme: 'light',
-      language: 'English (US)',
-      two_factor: false
-    };
-  }
+  const baseProfile = data || {
+    id: authUser.id,
+    name: authUser.user_metadata?.name || authUser.email,
+    email: authUser.email,
+    role: authUser.user_metadata?.role || 'Employee',
+    theme: 'light',
+    language: 'English (US)',
+    two_factor: false
+  };
 
   return {
-    ...data,
-    theme: data.theme || 'light',
-    language: data.language || 'English (US)',
-    deadline_reminders: data.deadline_reminders !== false,
-    high_risk_warnings: data.high_risk_warnings !== false,
-    workload_alerts: data.workload_alerts !== false,
-    weekly_report_ready: data.weekly_report_ready || false,
-    login_alerts: data.login_alerts !== false,
+    ...baseProfile,
+    originalRole: authUser.user_metadata?.role || baseProfile.role || 'Employee',
+    theme: baseProfile.theme || 'light',
+    language: baseProfile.language || 'English (US)',
+    deadline_reminders: baseProfile.deadline_reminders !== false,
+    high_risk_warnings: baseProfile.high_risk_warnings !== false,
+    workload_alerts: baseProfile.workload_alerts !== false,
+    weekly_report_ready: baseProfile.weekly_report_ready || false,
+    login_alerts: baseProfile.login_alerts !== false,
   };
 }
 
@@ -115,9 +114,19 @@ export function AuthProvider({ children }) {
 
   const updateUser = (u) => setUser(u);
 
+  const updateProfileRole = async (newRole) => {
+    if (!user) return;
+    const { error } = await supabase
+      .from('profiles')
+      .update({ role: newRole })
+      .eq('id', user.id);
+    if (error) throw error;
+    setUser((prev) => ({ ...prev, role: newRole }));
+  };
+
   const value = useMemo(
-    () => ({ user, loading, login, verify2FACode, signup, logout, updateUser }),
-    [user, loading, login, signup, logout, updateUser]
+    () => ({ user, loading, login, verify2FACode, signup, logout, updateUser, updateProfileRole }),
+    [user, loading, login, signup, logout, updateUser, updateProfileRole]
   );
 
   return (

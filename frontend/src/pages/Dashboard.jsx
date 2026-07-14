@@ -5,14 +5,14 @@ import { Bar, Doughnut } from 'react-chartjs-2';
 import { Chart as ChartJS, ArcElement, BarElement, CategoryScale, LinearScale, Tooltip, Legend } from 'chart.js';
 import { supabase } from '../lib/supabaseClient';
 import { attachRisk } from '../utils/riskEngine';
-import { StatCard } from '../components/UI';
+import { StatCard, toast } from '../components/UI';
 import { useAuth } from '../context/AuthContext';
 import { filterEmployees, filterProjects, filterNotifications } from '../utils/authFilters';
 
 ChartJS.register(ArcElement, BarElement, CategoryScale, LinearScale, Tooltip, Legend);
 
 export default function Dashboard() {
-  const { user } = useAuth();
+  const { user, updateProfileRole } = useAuth();
   const [stats, setStats] = useState(null);
   const [notifications, setNotifications] = useState([]);
   const navigate = useNavigate();
@@ -137,8 +137,80 @@ export default function Dashboard() {
     datasets: [{ data: [stats.riskCounts.Low, stats.riskCounts.Medium, stats.riskCounts.High], backgroundColor: ['#2E9E5B', '#E2A33D', '#D5514C'] }],
   };
 
+  const originalRole = user?.originalRole || 'Employee';
+  const currentRole = user?.role || 'Employee';
+
+  const rolesList = [
+    { value: 'Admin', label: 'Admin (Full Access)' },
+    { value: 'Project Manager', label: 'Project Manager (Management Access)' },
+    { value: 'Employee', label: 'Employee (Standard Access)' }
+  ];
+
+  const isRoleAllowed = (roleVal) => {
+    if (originalRole === 'Admin') return true;
+    if (originalRole === 'Project Manager') {
+      return roleVal === 'Project Manager' || roleVal === 'Employee';
+    }
+    return roleVal === 'Employee';
+  };
+
+  const handleRoleChange = async (e) => {
+    const newRole = e.target.value;
+    if (!isRoleAllowed(newRole)) {
+      toast('You are not authorized to switch to this higher role.');
+      return;
+    }
+    try {
+      await updateProfileRole(newRole);
+      toast(`Successfully switched role to: ${newRole}`);
+    } catch (err) {
+      toast(`Failed to update role: ${err.message}`);
+    }
+  };
+
   return (
     <div>
+      {/* Workspace Authority Switcher */}
+      <div className="mb-6 p-4 rounded-xl border border-slate-200 bg-gradient-to-r from-teal-50/50 to-slate-50/50 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all hover:border-slate-300">
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 rounded-lg bg-teal text-white shadow-sm flex-none">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
+              <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+              <circle cx="9" cy="7" r="4" />
+              <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+              <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+            </svg>
+          </div>
+          <div>
+            <h2 className="text-[14.5px] font-semibold text-slate-800">Workspace Authority Switcher</h2>
+            <p className="text-[12px] text-slate-500">
+              Simulate views for different roles. Original Role: <span className="font-semibold text-teal">{originalRole}</span>
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          <label htmlFor="role-select" className="text-[12.5px] font-medium text-slate-600">Simulate As:</label>
+          <div className="relative">
+            <select
+              id="role-select"
+              value={currentRole}
+              onChange={handleRoleChange}
+              className="px-3.5 py-1.5 pr-8 rounded-lg text-[13px] border border-slate-200 bg-white font-medium text-slate-700 shadow-sm focus:outline-none focus:ring-1 focus:ring-teal focus:border-teal transition-all hover:bg-slate-50"
+            >
+              {rolesList.map(r => (
+                <option
+                  key={r.value}
+                  value={r.value}
+                  disabled={!isRoleAllowed(r.value)}
+                >
+                  {r.label} {!isRoleAllowed(r.value) ? ' 🔒' : ''}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+      </div>
+
       <div className="grid gap-4 mb-5" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))' }}>
         {cards.map(c => <StatCard key={c.label} {...c} />)}
       </div>

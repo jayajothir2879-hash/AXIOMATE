@@ -26,7 +26,7 @@ export default function Clients() {
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState(EMPTY);
   const [editingId, setEditingId] = useState(null);
-  const canEdit = true;
+  const canEdit = user?.role === 'Admin' || user?.role === 'Project Manager';
 
   const load = async () => {
     const [{ data: clientsData }, { data: projectsData }, { data: employeesData }] = await Promise.all([

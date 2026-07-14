@@ -535,8 +535,9 @@ export default function Outcomes() {
               <tr>
                 {[
                   'Project Code',
+                  'Project Name',
                   'Outcome ID',
-                  'Title',
+                  'Outcome of the Project',
                   'Description',
                   'Definition of Done',
                   'Requested Date',
@@ -578,6 +579,7 @@ export default function Outcomes() {
                     className={`cursor-pointer ${isSelected ? 'bg-teal-50/60 font-semibold' : ''}`}
                   >
                     <td>{project?.project_code || '—'}</td>
+                    <td>{project?.name || '—'}</td>
                     <td className="font-mono">{outcome.outcome_code}</td>
                     <td className="font-semibold">{outcome.title}</td>
                     <td className="max-w-[200px] truncate" title={outcome.description}>{outcome.description || '—'}</td>
@@ -600,7 +602,7 @@ export default function Outcomes() {
                     <td className="text-right">{computed.eac_hours}</td>
                     <td className="text-right font-medium">{computed.percent_complete}%</td>
                     <td>
-                      <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                       <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                         <button
                           onClick={() => openEditOutcome(outcome)}
                           className="p-1 rounded hover:bg-slate-200 text-slate-500"
@@ -619,7 +621,7 @@ export default function Outcomes() {
                 );
               })}
               {!filteredOutcomes.length && (
-                <tr><td colSpan={23} className="text-center text-slate-400 py-10">No outcomes match your filters.</td></tr>
+                <tr><td colSpan={24} className="text-center text-slate-400 py-10">No outcomes match your filters.</td></tr>
               )}
             </tbody>
           </table>

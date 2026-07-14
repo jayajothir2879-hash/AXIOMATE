@@ -84,7 +84,7 @@ export default function Projects() {
             <option value="">All Priority</option><option>Low</option><option>Medium</option><option>High</option>
           </select>
         </div>
-        {canEdit && <button onClick={openNew} className="flex items-center gap-1.5 px-4.5 py-2 rounded-lg bg-teal text-white text-sm font-semibold hover:bg-teal-light"><Plus size={15} strokeWidth={2} /> New Project</button>}
+        {canEdit && <button onClick={openNew} className="flex items-center gap-1.5 px-4.5 py-2 rounded-lg bg-teal text-white text-sm font-semibold hover:bg-teal-light"><Plus size={15} strokeWidth={2} /> Add Project</button>}
       </div>
 
       <div className="bg-white border border-slate-200 rounded-[10px] shadow-sm overflow-x-auto">

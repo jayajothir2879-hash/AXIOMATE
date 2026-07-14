@@ -222,10 +222,7 @@ export default function Timesheet() {
     <div className="space-y-6">
       <div>
         <div className="font-semibold text-[15px] flex items-center gap-2">
-          <FileSpreadsheet size={18} strokeWidth={2} className="text-teal" /> Estimation Timesheet & T-Shirt Sizing
-        </div>
-        <div className="text-[12.5px] text-slate-500 max-w-3xl mt-0.5">
-          Follow the Axiomate Estimation Model to estimate outcomes dynamically based on Complexity scores, T-shirt Size mappings, and Blended Client Rates.
+          <FileSpreadsheet size={18} strokeWidth={2} className="text-teal" /> Common Timesheet
         </div>
       </div>
 

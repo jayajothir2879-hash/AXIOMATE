@@ -10,7 +10,7 @@ const TITLES = {
   '/dashboard': 'Dashboard', '/notifications': 'Notification Center', '/projects': 'Projects',
   '/employees': 'Employees', '/clients': 'Clients', '/risk': 'AI Risk Prediction',
   '/effort': 'Effort Tracking', '/assistant': 'AI Project Assistant', '/reports': 'Reports',
-  '/profile': 'My Profile', '/settings': 'Settings',
+  '/profile': 'My Profile', '/settings': 'Settings', '/timesheet': 'Common Timesheet',
 };
 
 export default function Topbar({ path, onBurger }) {

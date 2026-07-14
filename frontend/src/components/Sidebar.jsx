@@ -31,7 +31,7 @@ const NAV = [
     items: [
       { to: '/risk', label: 'Risk Prediction', Icon: ShieldAlert, roles: ['Admin', 'Project Manager', 'Employee'] },
       { to: '/effort', label: 'Effort Tracking', Icon: Clock, roles: ['Admin', 'Project Manager', 'Employee'] },
-      { to: '/timesheet', label: 'Timesheet', Icon: FileSpreadsheet, roles: ['Admin', 'Project Manager', 'Employee'] },
+      { to: '/timesheet', label: 'Common Timesheet', Icon: FileSpreadsheet, roles: ['Admin', 'Project Manager', 'Employee'] },
       { to: '/reports', label: 'Reports', Icon: FileBarChart2, roles: ['Admin', 'Project Manager', 'Employee'] },
     ]
   },

@@ -123,8 +123,8 @@ export default function Dashboard() {
     { label: 'Active Projects', value: stats.activeProjects, accent: '#0F6E7C', onClick: goToProjects('Active'), roles: ['Admin', 'Project Manager', 'Employee'] },
     { label: 'Completed Projects', value: stats.completedProjects, accent: '#2E9E5B', onClick: goToProjects('Completed'), roles: ['Admin', 'Project Manager', 'Employee'] },
     { label: 'Delayed Projects', value: stats.delayedProjects, accent: '#D5514C', onClick: goToProjects('Delayed'), roles: ['Admin', 'Project Manager', 'Employee'] },
-    { label: 'High-Risk Projects', value: stats.highRiskProjects, accent: '#E2A33D', onClick: () => navigate('/risk'), roles: ['Admin', 'Project Manager'] },
-    { label: 'Total Clients', value: stats.totalClients, accent: '#7C5CD9', onClick: () => navigate('/clients'), roles: ['Admin', 'Project Manager'] },
+    { label: 'High-Risk Projects', value: stats.highRiskProjects, accent: '#E2A33D', onClick: () => navigate('/risk'), roles: ['Admin', 'Project Manager', 'Employee'] },
+    { label: 'Total Clients', value: stats.totalClients, accent: '#7C5CD9', onClick: () => navigate('/clients'), roles: ['Admin', 'Project Manager', 'Employee'] },
     { label: 'Total Employees', value: stats.totalEmployees, accent: '#1B2436', onClick: () => navigate('/employees'), roles: ['Admin', 'Project Manager', 'Employee'] },
   ].filter(c => c.roles.includes(user?.role));
 

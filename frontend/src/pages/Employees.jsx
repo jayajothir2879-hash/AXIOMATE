@@ -17,9 +17,9 @@ export default function Employees() {
   const [form, setForm] = useState(EMPTY);
   const [editingId, setEditingId] = useState(null);
 
-  const canAdd = user?.role === 'Admin';
-  const canEdit = user?.role === 'Admin' || user?.role === 'Project Manager';
-  const canDelete = user?.role === 'Admin';
+  const canAdd = true;
+  const canEdit = true;
+  const canDelete = true;
 
   const load = () => supabase.from('employees').select('*, profiles(role)').order('id').then(({ data }) => {
     setRows(filterEmployees(data || [], user));
@@ -28,8 +28,20 @@ export default function Employees() {
 
   const filtered = useMemo(() => rows.filter(e => !q || e.name.toLowerCase().includes(q.toLowerCase()) || (e.department || '').toLowerCase().includes(q.toLowerCase())), [rows, q]);
 
-  const openNew = () => { setForm(EMPTY); setEditingId(null); setModalOpen(true); };
-  const openEdit = (e) => { setForm({ ...EMPTY, ...e }); setEditingId(e.id); setModalOpen(true); };
+  const openNew = () => {
+    if (user?.role !== 'Admin') {
+      toast("Access Denied: Only Admins can add employees.");
+      return;
+    }
+    setForm(EMPTY); setEditingId(null); setModalOpen(true);
+  };
+  const openEdit = (e) => {
+    if (user?.role !== 'Admin' && user?.role !== 'Project Manager') {
+      toast("Access Denied: Only Admins and Project Managers can edit employees.");
+      return;
+    }
+    setForm({ ...EMPTY, ...e }); setEditingId(e.id); setModalOpen(true);
+  };
 
   const save = async () => {
     try {
@@ -46,6 +58,10 @@ export default function Employees() {
     } catch (err) { toast(err.message || 'Unable to save employee.'); }
   };
   const remove = async (id) => {
+    if (user?.role !== 'Admin') {
+      toast("Access Denied: Only Admins can delete employees.");
+      return;
+    }
     if (!confirm('Delete this employee?')) return;
     const { error } = await supabase.from('employees').delete().eq('id', id);
     if (error) { toast(error.message); return; }

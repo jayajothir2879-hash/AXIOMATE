@@ -58,8 +58,20 @@ export default function Clients() {
   [rows, q]
 );
 
-  const openNew = () => { setForm(EMPTY); setEditingId(null); setModalOpen(true); };
-  const openEdit = (c) => { setForm({ ...EMPTY, ...c }); setEditingId(c.id); setModalOpen(true); };
+  const openNew = () => {
+    if (user?.role !== 'Admin' && user?.role !== 'Project Manager') {
+      toast("Access Denied: Only Admins and Project Managers can manage clients.");
+      return;
+    }
+    setForm(EMPTY); setEditingId(null); setModalOpen(true);
+  };
+  const openEdit = (c) => {
+    if (user?.role !== 'Admin' && user?.role !== 'Project Manager') {
+      toast("Access Denied: Only Admins and Project Managers can manage clients.");
+      return;
+    }
+    setForm({ ...EMPTY, ...c }); setEditingId(c.id); setModalOpen(true);
+  };
 
   const save = async () => {
     try {
@@ -87,6 +99,10 @@ export default function Clients() {
     } catch (err) { toast(err.message || 'Unable to save client.'); }
   };
   const remove = async (id) => {
+    if (user?.role !== 'Admin' && user?.role !== 'Project Manager') {
+      toast("Access Denied: Only Admins and Project Managers can manage clients.");
+      return;
+    }
     if (!confirm('Delete this client?')) return;
     const { error } = await supabase.from('clients').delete().eq('id', id);
     if (error) { toast(error.message); return; }

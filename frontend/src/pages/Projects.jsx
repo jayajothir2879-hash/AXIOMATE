@@ -44,17 +44,9 @@ export default function Projects() {
   }), [projects, q, statusFilter, priorityFilter]);
 
   const openNew = () => {
-    if (user?.role !== 'Admin' && user?.role !== 'Project Manager') {
-      toast("Access Denied: Only Admins and Project Managers can manage projects.");
-      return;
-    }
     setForm(EMPTY); setEditingId(null); setModalOpen(true);
   };
   const openEdit = (p) => {
-    if (user?.role !== 'Admin' && user?.role !== 'Project Manager') {
-      toast("Access Denied: Only Admins and Project Managers can manage projects.");
-      return;
-    }
     setForm({ name: p.name, client_id: p.client_id || '', start_date: p.start_date || '', end_date: p.end_date || '', progress: p.progress, priority: p.priority, status: p.status, assigned_employees: p.assigned_employees || '', remarks: p.remarks || '' });
     setEditingId(p.id); setModalOpen(true);
   };
@@ -77,7 +69,7 @@ export default function Projects() {
 
   const remove = async (id) => {
     if (user?.role !== 'Admin' && user?.role !== 'Project Manager') {
-      toast("Access Denied: Only Admins and Project Managers can manage projects.");
+      toast("Access Denied: Only Admins and Project Managers can delete projects.");
       return;
     }
     if (!confirm('Delete this project? This cannot be undone.')) return;

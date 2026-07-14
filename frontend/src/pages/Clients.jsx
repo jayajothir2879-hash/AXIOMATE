@@ -59,17 +59,9 @@ export default function Clients() {
 );
 
   const openNew = () => {
-    if (user?.role !== 'Admin' && user?.role !== 'Project Manager') {
-      toast("Access Denied: Only Admins and Project Managers can manage clients.");
-      return;
-    }
     setForm(EMPTY); setEditingId(null); setModalOpen(true);
   };
   const openEdit = (c) => {
-    if (user?.role !== 'Admin' && user?.role !== 'Project Manager') {
-      toast("Access Denied: Only Admins and Project Managers can manage clients.");
-      return;
-    }
     setForm({ ...EMPTY, ...c }); setEditingId(c.id); setModalOpen(true);
   };
 
@@ -100,7 +92,7 @@ export default function Clients() {
   };
   const remove = async (id) => {
     if (user?.role !== 'Admin' && user?.role !== 'Project Manager') {
-      toast("Access Denied: Only Admins and Project Managers can manage clients.");
+      toast("Access Denied: Only Admins and Project Managers can delete clients.");
       return;
     }
     if (!confirm('Delete this client?')) return;

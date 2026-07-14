@@ -146,7 +146,7 @@ export default function Projects() {
             <select className="in" value={form.status} onChange={e => setForm({ ...form, status: e.target.value })}><option>Active</option><option>Completed</option><option>Delayed</option><option>On Hold</option></select>
           </F>
           <F label="Assigned Employees (comma-separated)" full><input className="in" value={form.assigned_employees} onChange={e => setForm({ ...form, assigned_employees: e.target.value })} /></F>
-          <F label="Remarks" full><textarea className="in" rows={3} value={form.remarks} onChange={e => setForm({ ...form, remarks: e.target.value })} /></F>
+          <F label="Project Outcome" full><textarea className="in" rows={3} value={form.remarks} onChange={e => setForm({ ...form, remarks: e.target.value })} /></F>
         </div>
       </Modal>
       <style>{`.in{width:100%;padding:.5rem .6rem;border-radius:.45rem;font-size:.83rem;border:1px solid #E3E7EE;}`}</style>

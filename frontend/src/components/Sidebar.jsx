@@ -23,7 +23,7 @@ const NAV = [
       { to: '/projects', label: 'Projects', Icon: FolderKanban, roles: ['Admin', 'Project Manager', 'Employee'] },
       { to: '/outcomes', label: 'Outcomes', Icon: ClipboardList, roles: ['Admin', 'Project Manager', 'Employee'] },
       { to: '/employees', label: 'Employees', Icon: Users, roles: ['Admin', 'Project Manager', 'Employee'] },
-      { to: '/clients', label: 'Clients', Icon: Building2, roles: ['Admin', 'Project Manager'] },
+      { to: '/clients', label: 'Clients', Icon: Building2, roles: ['Admin', 'Project Manager', 'Employee'] },
     ]
   },
   {

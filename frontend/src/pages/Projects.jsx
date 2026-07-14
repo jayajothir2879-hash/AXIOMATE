@@ -23,7 +23,7 @@ export default function Projects() {
   const [form, setForm] = useState(EMPTY);
   const [editingId, setEditingId] = useState(null);
 
-  const canEdit = user?.role === 'Admin' || user?.role === 'Project Manager';
+  const canEdit = user?.role === 'Admin' || user?.role === 'Project Manager' || user?.role === 'Employee';
 
   const load = async () => {
     const [{ data: projectRows }, { data: employeeRows }, { data: clientRows }] = await Promise.all([

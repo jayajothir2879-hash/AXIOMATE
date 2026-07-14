@@ -5,9 +5,13 @@ import { Bar, Doughnut } from 'react-chartjs-2';
 import { Chart as ChartJS, ArcElement, BarElement, CategoryScale, LinearScale, Tooltip, Legend } from 'chart.js';
 import { supabase } from '../lib/supabaseClient';
 import { attachRisk } from '../utils/riskEngine';
-import { StatCard, toast } from '../components/UI';
+import { StatCard, Pill, riskTone, statusTone, priorityTone, toast } from '../components/UI';
 import { useAuth } from '../context/AuthContext';
 import { filterEmployees, filterProjects, filterNotifications } from '../utils/authFilters';
+import {
+  Clock, Plus, TriangleAlert, TrendingDown, FolderKanban,
+  Users, Building2, ClipboardCheck, ArrowRight, Activity, ShieldAlert
+} from 'lucide-react';
 
 ChartJS.register(ArcElement, BarElement, CategoryScale, LinearScale, Tooltip, Legend);
 
@@ -17,127 +21,134 @@ export default function Dashboard() {
   const [notifications, setNotifications] = useState([]);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    (async () => {
-      const [{ data: projects }, { data: employees }, { data: clients }] = await Promise.all([
-        supabase.from('projects').select('*'),
-        supabase.from('employees').select('*, profiles(role)'),
-        supabase.from('clients').select('id'),
-      ]);
+  const loadData = async () => {
+    const [{ data: projects }, { data: employees }, { data: clients }] = await Promise.all([
+      supabase.from('projects').select('*'),
+      supabase.from('employees').select('*, profiles(role)'),
+      supabase.from('clients').select('*'),
+    ]);
 
-      const visibleEmployees = filterEmployees(employees || [], user);
-      const visibleProjects = filterProjects(projects || [], employees || [], user);
-      const withRisk = attachRisk(visibleProjects, employees || []);
+    const visibleEmployees = filterEmployees(employees || [], user);
+    const visibleProjects = filterProjects(projects || [], employees || [], user);
+    const withRisk = attachRisk(visibleProjects, employees || []);
 
-      const statusCounts = { Active: 0, Completed: 0, Delayed: 0, 'On Hold': 0 };
-      const riskCounts = { Low: 0, Medium: 0, High: 0 };
-      withRisk.forEach((p) => {
-        statusCounts[p.status] = (statusCounts[p.status] || 0) + 1;
-        if (p.risk && p.risk.level) {
-          riskCounts[p.risk.level] = (riskCounts[p.risk.level] || 0) + 1;
-        }
-      });
-
-      // --- Live Notifications Generator ---
-      let generatedNew = false;
-
-      // 1. Workload Alerts
-      if (user?.deadline_reminders !== false) { // map to matching settings
-        if (user?.workload_alerts !== false) {
-          for (const emp of visibleEmployees || []) {
-            if (emp.workload === 'Overloaded' || Number(emp.weekly_hours) > 40) {
-              const title = `Workload Alert: ${emp.name}`;
-              const message = `${emp.name} is overloaded with ${emp.weekly_hours} hours/week.`;
-              const { data: exists } = await supabase.from('notifications').select('id').eq('title', title).limit(1);
-              if (!exists || exists.length === 0) {
-                await supabase.from('notifications').insert({ type: 'warn', title, message });
-                generatedNew = true;
-              }
-            }
-          }
-        }
+    const statusCounts = { Active: 0, Completed: 0, Delayed: 0, 'On Hold': 0 };
+    const riskCounts = { Low: 0, Medium: 0, High: 0 };
+    withRisk.forEach((p) => {
+      statusCounts[p.status] = (statusCounts[p.status] || 0) + 1;
+      if (p.risk && p.risk.level) {
+        riskCounts[p.risk.level] = (riskCounts[p.risk.level] || 0) + 1;
       }
+    });
 
-      // 2. High-Risk Warnings
-      if (user?.high_risk_warnings !== false) {
-        for (const p of withRisk) {
-          if (p.risk.level === 'High') {
-            const title = `High-Risk Alert: ${p.name}`;
-            const message = `${p.name} is classified as High Risk: ${p.risk.reasons.join('; ')}`;
+    // Find current user's employee record (or matching by email)
+    const userEmployee = (employees || []).find(e => e.profile_id === user.id) ||
+                         (employees || []).find(e => e.email?.toLowerCase() === user.email?.toLowerCase());
+
+    const userEmpName = userEmployee?.name?.toLowerCase() || '';
+    const userName = user.name?.toLowerCase() || '';
+    const userAssignedProjectsList = (userEmployee?.assigned_projects || '')
+      .split(',')
+      .map(s => s.trim().toLowerCase())
+      .filter(Boolean);
+
+    const userProjects = withRisk.filter(p => {
+      const assignedNames = (p.assigned_employees || '')
+        .split(',')
+        .map(s => s.trim().toLowerCase())
+        .filter(Boolean);
+      const isProjectAssignedToUser = (p.project_code && userAssignedProjectsList.includes(p.project_code.toLowerCase())) ||
+                                      (p.name && userAssignedProjectsList.includes(p.name.toLowerCase()));
+      return (userEmpName && assignedNames.includes(userEmpName)) ||
+             (userName && assignedNames.includes(userName)) ||
+             isProjectAssignedToUser;
+    });
+
+    const workloadCounts = { Low: 0, Medium: 0, High: 0, Overloaded: 0 };
+    visibleEmployees.forEach(e => {
+      workloadCounts[e.workload || 'Low'] = (workloadCounts[e.workload || 'Low'] || 0) + 1;
+    });
+
+    // --- Live Notifications Generator ---
+    let generatedNew = false;
+    if (user?.deadline_reminders !== false) {
+      if (user?.workload_alerts !== false) {
+        for (const emp of visibleEmployees || []) {
+          if (emp.workload === 'Overloaded' || Number(emp.weekly_hours) > 40) {
+            const title = `Workload Alert: ${emp.name}`;
+            const message = `${emp.name} is overloaded with ${emp.weekly_hours} hours/week.`;
             const { data: exists } = await supabase.from('notifications').select('id').eq('title', title).limit(1);
             if (!exists || exists.length === 0) {
-              await supabase.from('notifications').insert({ type: 'risk', title, message });
+              await supabase.from('notifications').insert({ type: 'warn', title, message });
               generatedNew = true;
             }
           }
         }
       }
+    }
 
-      // 3. Deadline Reminders
-      if (user?.deadline_reminders !== false) {
-        for (const p of visibleProjects || []) {
-          if (p.status !== 'Completed' && p.end_date) {
-            const diffTime = new Date(p.end_date) - new Date();
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-            if (diffDays >= 0 && diffDays <= 7) {
-              const title = `Deadline Reminder: ${p.name}`;
-              const message = `${p.name} is approaching its deadline on ${p.end_date}.`;
-              const { data: exists } = await supabase.from('notifications').select('id').eq('title', title).limit(1);
-              if (!exists || exists.length === 0) {
-                await supabase.from('notifications').insert({ type: 'update', title, message });
-                generatedNew = true;
-              }
+    if (user?.high_risk_warnings !== false) {
+      for (const p of withRisk) {
+        if (p.risk.level === 'High') {
+          const title = `High-Risk Alert: ${p.name}`;
+          const message = `${p.name} is classified as High Risk: ${p.risk.reasons.join('; ')}`;
+          const { data: exists } = await supabase.from('notifications').select('id').eq('title', title).limit(1);
+          if (!exists || exists.length === 0) {
+            await supabase.from('notifications').insert({ type: 'risk', title, message });
+            generatedNew = true;
+          }
+        }
+      }
+    }
+
+    if (user?.deadline_reminders !== false) {
+      for (const p of visibleProjects || []) {
+        if (p.status !== 'Completed' && p.end_date) {
+          const diffTime = new Date(p.end_date) - new Date();
+          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+          if (diffDays >= 0 && diffDays <= 7) {
+            const title = `Deadline Reminder: ${p.name}`;
+            const message = `${p.name} is approaching its deadline on ${p.end_date}.`;
+            const { data: exists } = await supabase.from('notifications').select('id').eq('title', title).limit(1);
+            if (!exists || exists.length === 0) {
+              await supabase.from('notifications').insert({ type: 'update', title, message });
+              generatedNew = true;
             }
           }
         }
       }
+    }
 
-      // Fetch latest notifications list
-      const { data: notifs } = await supabase.from('notifications').select('*').order('created_at', { ascending: false }).limit(100);
-      const filteredNotifs = filterNotifications(notifs || [], visibleProjects, visibleEmployees);
+    const { data: notifs } = await supabase.from('notifications').select('*').order('created_at', { ascending: false }).limit(100);
+    const filteredNotifs = filterNotifications(notifs || [], visibleProjects, visibleEmployees);
 
-      const visibleClientIds = new Set(visibleProjects.map(p => p.client_id).filter(Boolean));
-      const totalClientsCount = (clients || []).filter(c => visibleClientIds.has(c.id)).length;
+    const visibleClientIds = new Set(visibleProjects.map(p => p.client_id).filter(Boolean));
+    const totalClientsCount = (clients || []).filter(c => visibleClientIds.has(c.id)).length;
 
-      setStats({
-        totalProjects: visibleProjects.length,
-        activeProjects: statusCounts.Active,
-        completedProjects: statusCounts.Completed,
-        delayedProjects: statusCounts.Delayed,
-        highRiskProjects: riskCounts.High,
-        totalClients: user.role === 'Admin' ? (clients || []).length : totalClientsCount,
-        totalEmployees: visibleEmployees.length,
-        statusCounts,
-        riskCounts,
-      });
-      setNotifications(filteredNotifs.slice(0, 5));
-    })();
+    setStats({
+      totalProjects: visibleProjects.length,
+      activeProjects: statusCounts.Active,
+      completedProjects: statusCounts.Completed,
+      delayedProjects: statusCounts.Delayed,
+      highRiskProjects: riskCounts.High,
+      totalClients: user.role === 'Admin' ? (clients || []).length : totalClientsCount,
+      totalEmployees: visibleEmployees.length,
+      statusCounts,
+      riskCounts,
+      workloadCounts,
+      userEmployee,
+      userProjects,
+      projects: withRisk
+    });
+    setNotifications(filteredNotifs.slice(0, 5));
+  };
+
+  useEffect(() => {
+    loadData();
   }, [user]);
 
   if (!stats) return <div className="text-slate-400">Loading dashboard…</div>;
 
-  const goToProjects = (status) => () => navigate('/projects', { state: { statusFilter: status } });
-
-  const cards = [
-    { label: 'Total Projects', value: stats.totalProjects, accent: '#3E6FD9', onClick: () => navigate('/projects'), roles: ['Admin', 'Project Manager', 'Employee'] },
-    { label: 'Active Projects', value: stats.activeProjects, accent: '#0F6E7C', onClick: goToProjects('Active'), roles: ['Admin', 'Project Manager', 'Employee'] },
-    { label: 'Completed Projects', value: stats.completedProjects, accent: '#2E9E5B', onClick: goToProjects('Completed'), roles: ['Admin', 'Project Manager', 'Employee'] },
-    { label: 'Delayed Projects', value: stats.delayedProjects, accent: '#D5514C', onClick: goToProjects('Delayed'), roles: ['Admin', 'Project Manager', 'Employee'] },
-    { label: 'High-Risk Projects', value: stats.highRiskProjects, accent: '#E2A33D', onClick: () => navigate('/risk'), roles: ['Admin', 'Project Manager', 'Employee'] },
-    { label: 'Total Clients', value: stats.totalClients, accent: '#7C5CD9', onClick: () => navigate('/clients'), roles: ['Admin', 'Project Manager', 'Employee'] },
-    { label: 'Total Employees', value: stats.totalEmployees, accent: '#1B2436', onClick: () => navigate('/employees'), roles: ['Admin', 'Project Manager', 'Employee'] },
-  ].filter(c => c.roles.includes(user?.role));
-
-  const statusData = {
-    labels: Object.keys(stats.statusCounts),
-    datasets: [{ data: Object.values(stats.statusCounts), backgroundColor: ['#0F6E7C', '#2E9E5B', '#D5514C', '#93A0B8'], borderRadius: 6 }],
-  };
-  const riskData = {
-    labels: ['Low Risk', 'Medium Risk', 'High Risk'],
-    datasets: [{ data: [stats.riskCounts.Low, stats.riskCounts.Medium, stats.riskCounts.High], backgroundColor: ['#2E9E5B', '#E2A33D', '#D5514C'] }],
-  };
-
-  const originalRole = user?.originalRole || 'Employee';
   const currentRole = user?.role || 'Employee';
 
   const rolesList = [
@@ -146,16 +157,8 @@ export default function Dashboard() {
     { value: 'Employee', label: 'Employee' }
   ];
 
-  const isRoleAllowed = (roleVal) => {
-    return true;
-  };
-
   const handleRoleChange = async (e) => {
     const newRole = e.target.value;
-    if (!isRoleAllowed(newRole)) {
-      toast('You are not authorized to switch to this higher role.');
-      return;
-    }
     try {
       await updateProfileRole(newRole);
       toast(`Successfully switched role to: ${newRole}`);
@@ -164,21 +167,18 @@ export default function Dashboard() {
     }
   };
 
+  // Render dashboard based on role
   return (
-    <div>
+    <div className="space-y-6">
       {/* Workspace Authority Switcher */}
-      <div className="mb-6 p-4 rounded-xl border border-slate-200 bg-gradient-to-r from-teal-50/50 to-slate-50/50 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all hover:border-slate-300">
+      <div className="p-4 rounded-xl border border-slate-200 bg-gradient-to-r from-teal-50/50 to-slate-50/50 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all hover:border-slate-300">
         <div className="flex items-center gap-3">
           <div className="p-2.5 rounded-lg bg-teal text-white shadow-sm flex-none">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
-              <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-              <circle cx="9" cy="7" r="4" />
-              <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
-              <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-            </svg>
+            <Activity className="w-5 h-5" />
           </div>
           <div>
             <h2 className="text-[14.5px] font-semibold text-slate-800">Role Switcher</h2>
+            <p className="text-[11px] text-slate-500">Switch views to test role-specific dashboards</p>
           </div>
         </div>
         <div className="flex items-center gap-3">
@@ -191,12 +191,8 @@ export default function Dashboard() {
               className="px-3.5 py-1.5 pr-8 rounded-lg text-[13px] border border-slate-200 bg-white font-medium text-slate-700 shadow-sm focus:outline-none focus:ring-1 focus:ring-teal focus:border-teal transition-all hover:bg-slate-50"
             >
               {rolesList.map(r => (
-                <option
-                  key={r.value}
-                  value={r.value}
-                  disabled={!isRoleAllowed(r.value)}
-                >
-                  {r.label} {!isRoleAllowed(r.value) ? ' 🔒' : ''}
+                <option key={r.value} value={r.value}>
+                  {r.label}
                 </option>
               ))}
             </select>
@@ -204,44 +200,349 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div className="grid gap-4 mb-5" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))' }}>
-        {cards.map(c => <StatCard key={c.label} {...c} />)}
+      {currentRole === 'Admin' && (
+        <AdminDashboardView
+          stats={stats}
+          notifications={notifications}
+          navigate={navigate}
+        />
+      )}
+
+      {currentRole === 'Project Manager' && (
+        <PMDashboardView
+          stats={stats}
+          notifications={notifications}
+          navigate={navigate}
+        />
+      )}
+
+      {currentRole === 'Employee' && (
+        <EmployeeDashboardView
+          stats={stats}
+          notifications={notifications}
+          navigate={navigate}
+          onLogSave={loadData}
+        />
+      )}
+    </div>
+  );
+}
+
+/* ==========================================
+   ADMIN DASHBOARD VIEW
+   ========================================== */
+function AdminDashboardView({ stats, notifications, navigate }) {
+  const statusData = {
+    labels: Object.keys(stats.statusCounts),
+    datasets: [{ data: Object.values(stats.statusCounts), backgroundColor: ['#0F6E7C', '#2E9E5B', '#D5514C', '#93A0B8'], borderRadius: 6 }],
+  };
+
+  const workloadData = {
+    labels: ['Low', 'Medium', 'High', 'Overloaded'],
+    datasets: [{
+      data: [
+        stats.workloadCounts.Low || 0,
+        stats.workloadCounts.Medium || 0,
+        stats.workloadCounts.High || 0,
+        stats.workloadCounts.Overloaded || 0
+      ],
+      backgroundColor: ['#2E9E5B', '#E2A33D', '#D5514C', '#952A25'],
+      borderRadius: 6
+    }]
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Cards */}
+      <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
+        <StatCard label="Total Projects" value={stats.totalProjects} accent="#3E6FD9" onClick={() => navigate('/projects')} />
+        <StatCard label="Active Projects" value={stats.activeProjects} accent="#0F6E7C" onClick={() => navigate('/projects', { state: { statusFilter: 'Active' } })} />
+        <StatCard label="Total Clients" value={stats.totalClients} accent="#7C5CD9" onClick={() => navigate('/clients')} />
+        <StatCard label="Total Employees" value={stats.totalEmployees} accent="#1B2436" onClick={() => navigate('/employees')} />
       </div>
 
-      <div className="grid md:grid-cols-2 gap-4 mb-5">
+      {/* Charts */}
+      <div className="grid md:grid-cols-2 gap-4">
         <div className="bg-white border border-slate-200 rounded-[10px] p-4 shadow-sm">
-          <div className="font-semibold text-[15px]">Projects by Status</div>
-          <div className="text-[12.5px] text-slate-500 mb-3">Live snapshot from Supabase</div>
+          <div className="font-semibold text-[14.5px]">Resource Workload Allocation</div>
+          <div className="text-[12px] text-slate-500 mb-3">Overall breakdown of workforce utilization</div>
+          <Bar data={workloadData} options={{ plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }} height={200} />
+        </div>
+        <div className="bg-white border border-slate-200 rounded-[10px] p-4 shadow-sm">
+          <div className="font-semibold text-[14.5px]">Projects by Status</div>
+          <div className="text-[12px] text-slate-500 mb-3">Vitals from active client deliverables</div>
           <Bar data={statusData} options={{ plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }} height={200} />
         </div>
-        <div className="bg-white border border-slate-200 rounded-[10px] p-4 shadow-sm">
-          <div className="font-semibold text-[15px]">Risk Distribution</div>
-          <div className="text-[12.5px] text-slate-500 mb-3">AI-classified risk across all projects</div>
-          <Doughnut data={riskData} options={{ plugins: { legend: { position: 'bottom' } } }} height={200} />
-        </div>
       </div>
 
-      <div className="bg-white border border-slate-200 rounded-[10px] p-4 shadow-sm">
-        <div className="flex justify-between items-center mb-2">
-          <div>
-            <div className="font-semibold text-[15px]">Recent Notifications</div>
-            <div className="text-[12.5px] text-slate-500">Swipe to browse the latest updates</div>
-          </div>
-          <button onClick={() => navigate('/notifications')} className="text-[12.5px] font-semibold text-teal">View all</button>
-        </div>
-        <div className="notif-scroll flex gap-3.5 overflow-x-auto pb-2 pt-1">
-          {notifications.map(n => (
-            <div key={n.id} className={`flex-none w-[280px] bg-white border border-slate-200 rounded-lg p-3.5 shadow-sm border-l-4`}
-              style={{ borderLeftColor: n.type === 'risk' ? '#D5514C' : n.type === 'warn' ? '#E2A33D' : '#0F6E7C' }}>
-              <div className="text-[10.5px] uppercase tracking-wide text-slate-500 mb-1.5">{n.title}</div>
-              <div className="text-[13.5px] leading-snug mb-2">{n.message}</div>
-              <div className="text-[11px] text-slate-400">{new Date(n.created_at).toLocaleString()}</div>
+      {/* Bottom section */}
+      <div className="grid md:grid-cols-3 gap-4">
+        <div className="md:col-span-2 bg-white border border-slate-200 rounded-[10px] p-4 shadow-sm">
+          <div className="flex justify-between items-center mb-3">
+            <div>
+              <div className="font-semibold text-[14.5px]">System Alerts & Logs</div>
+              <div className="text-[12px] text-slate-500">Latest resource warnings</div>
             </div>
-          ))}
-          {!notifications.length && <div className="text-slate-400 text-sm py-4">No notifications yet.</div>}
+            <button onClick={() => navigate('/notifications')} className="text-[12px] font-semibold text-teal hover:underline">View all</button>
+          </div>
+          <div className="space-y-2">
+            {notifications.map(n => (
+              <div key={n.id} className="p-3 bg-slate-50 border-l-4 rounded-r-lg flex justify-between items-start gap-4 text-[13px]"
+                style={{ borderLeftColor: n.type === 'risk' ? '#D5514C' : n.type === 'warn' ? '#E2A33D' : '#0F6E7C' }}>
+                <div>
+                  <div className="font-semibold text-slate-700">{n.title}</div>
+                  <div className="text-[12px] text-slate-500 mt-0.5">{n.message}</div>
+                </div>
+                <div className="text-[10px] text-slate-400 whitespace-nowrap">{new Date(n.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+              </div>
+            ))}
+            {!notifications.length && <div className="text-slate-400 text-sm py-4">No warnings at this time.</div>}
+          </div>
+        </div>
+
+        <div className="bg-white border border-slate-200 rounded-[10px] p-4 shadow-sm flex flex-col justify-between">
+          <div>
+            <div className="font-semibold text-[14.5px] mb-1">Administrative Operations</div>
+            <div className="text-[12px] text-slate-500 mb-4">Quick links to expand directory settings</div>
+          </div>
+          <div className="space-y-2">
+            <button onClick={() => navigate('/projects')} className="w-full flex items-center justify-between p-2.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-[13px] font-medium text-slate-700">
+              <span className="flex items-center gap-2"><FolderKanban size={15} className="text-slate-500" /> Create Project</span> <ArrowRight size={13} />
+            </button>
+            <button onClick={() => navigate('/employees')} className="w-full flex items-center justify-between p-2.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-[13px] font-medium text-slate-700">
+              <span className="flex items-center gap-2"><Users size={15} className="text-slate-500" /> Register Employee</span> <ArrowRight size={13} />
+            </button>
+            <button onClick={() => navigate('/clients')} className="w-full flex items-center justify-between p-2.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-[13px] font-medium text-slate-700">
+              <span className="flex items-center gap-2"><Building2 size={15} className="text-slate-500" /> Register Client</span> <ArrowRight size={13} />
+            </button>
+            <button onClick={() => navigate('/reports')} className="w-full flex items-center justify-between p-2.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-[13px] font-medium text-slate-700">
+              <span className="flex items-center gap-2"><ClipboardCheck size={15} className="text-slate-500" /> View Analytics Report</span> <ArrowRight size={13} />
+            </button>
+          </div>
         </div>
       </div>
     </div>
   );
 }
 
+/* ==========================================
+   PROJECT MANAGER DASHBOARD VIEW
+   ========================================== */
+function PMDashboardView({ stats, notifications, navigate }) {
+  const statusData = {
+    labels: Object.keys(stats.statusCounts),
+    datasets: [{ data: Object.values(stats.statusCounts), backgroundColor: ['#0F6E7C', '#2E9E5B', '#D5514C', '#93A0B8'], borderRadius: 6 }],
+  };
+
+  // Delayed / high-risk project watch list
+  const pmWatchlist = stats.projects.filter(p => p.status === 'Delayed' || p.risk?.level === 'High');
+
+  return (
+    <div className="space-y-6">
+      {/* PM Cards */}
+      <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
+        <StatCard label="Active Projects" value={stats.activeProjects} accent="#0F6E7C" onClick={() => navigate('/projects', { state: { statusFilter: 'Active' } })} />
+        <StatCard label="Delayed Projects" value={stats.delayedProjects} accent="#D5514C" onClick={() => navigate('/projects', { state: { statusFilter: 'Delayed' } })} />
+        <StatCard label="High-Risk Projects" value={stats.highRiskProjects} accent="#E2A33D" onClick={() => navigate('/risk')} />
+        <StatCard label="Total Clients" value={stats.totalClients} accent="#7C5CD9" onClick={() => navigate('/clients')} />
+      </div>
+
+      {/* PM specific watchlist & status bar */}
+      <div className="grid md:grid-cols-3 gap-4">
+        <div className="md:col-span-2 bg-white border border-slate-200 rounded-[10px] p-4 shadow-sm">
+          <div className="font-semibold text-[14.5px] mb-1 text-slate-800">Delayed & At-Risk Projects Watchlist</div>
+          <div className="text-[12px] text-slate-500 mb-4 border-b pb-2">Critical path deliverables requiring mitigation</div>
+          <div className="space-y-3.5 max-h-[300px] overflow-y-auto pr-1 notif-scroll">
+            {pmWatchlist.map(p => (
+              <div key={p.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 border border-slate-100 rounded-xl hover:border-slate-200 transition-all bg-slate-50/30 gap-3">
+                <div>
+                  <div className="font-semibold text-[13.5px] text-slate-700">{p.name}</div>
+                  <div className="text-[11.5px] text-slate-400 mt-0.5">{p.project_code} · Ends: {p.end_date || 'N/A'}</div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-[100px] flex items-center gap-2">
+                    <div className="flex-1 h-1.5 bg-slate-100 rounded overflow-hidden"><div className="h-full bg-teal" style={{ width: `${p.progress}%` }} /></div>
+                    <span className="text-[11px] font-mono-plex">{p.progress}%</span>
+                  </div>
+                  <Pill tone={statusTone(p.status)}>{p.status}</Pill>
+                  <Pill tone={riskTone(p.risk?.level)}>{p.risk?.level}</Pill>
+                </div>
+              </div>
+            ))}
+            {!pmWatchlist.length && <div className="text-slate-400 text-sm py-8 text-center">All projects are healthy and on-track!</div>}
+          </div>
+        </div>
+
+        <div className="bg-white border border-slate-200 rounded-[10px] p-4 shadow-sm flex flex-col justify-between">
+          <div>
+            <div className="font-semibold text-[14.5px] mb-1">Project Status Breakdown</div>
+            <div className="text-[12px] text-slate-500 mb-4">Overall project delivery stats</div>
+          </div>
+          <Bar data={statusData} options={{ plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }} height={200} />
+        </div>
+      </div>
+
+      {/* PM Warnings */}
+      <div className="bg-white border border-slate-200 rounded-[10px] p-4 shadow-sm">
+        <div className="flex justify-between items-center mb-3">
+          <div>
+            <div className="font-semibold text-[14.5px] flex items-center gap-1.5"><ShieldAlert size={16} className="text-amber-500" /> Active Risk Warnings</div>
+            <div className="text-[12px] text-slate-500">Live predictions computed by AI Risk Engine</div>
+          </div>
+          <button onClick={() => navigate('/risk')} className="text-[12px] font-semibold text-teal hover:underline">Mitigate Risk</button>
+        </div>
+        <div className="space-y-2">
+          {notifications.filter(n => n.type === 'risk' || n.type === 'warn').map(n => (
+            <div key={n.id} className="p-3 bg-slate-50 border-l-4 rounded-r-lg text-[13px]"
+              style={{ borderLeftColor: n.type === 'risk' ? '#D5514C' : '#E2A33D' }}>
+              <div className="font-semibold text-slate-700">{n.title}</div>
+              <div className="text-[12px] text-slate-500 mt-0.5">{n.message}</div>
+            </div>
+          ))}
+          {!notifications.filter(n => n.type === 'risk' || n.type === 'warn').length && (
+            <div className="text-slate-400 text-sm py-4">No risk predictions to display.</div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ==========================================
+   EMPLOYEE DASHBOARD VIEW
+   ========================================== */
+function EmployeeDashboardView({ stats, notifications, navigate, onLogSave }) {
+  const [logForm, setLogForm] = useState({
+    log_date: new Date().toISOString().slice(0, 10),
+    task: '',
+    hours: 8
+  });
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleQuickLog = async (e) => {
+    e.preventDefault();
+    if (!stats.userEmployee) {
+      toast('No employee record found for your user. Please contact an admin.');
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const { error } = await supabase
+        .from('work_logs')
+        .insert([{
+          employee_id: stats.userEmployee.id,
+          log_date: logForm.log_date,
+          task: logForm.task || 'General work',
+          hours: Number(logForm.hours)
+        }]);
+
+      if (error) throw error;
+      toast('Hours logged successfully!');
+      setLogForm({ log_date: new Date().toISOString().slice(0, 10), task: '', hours: 8 });
+      onLogSave();
+    } catch (err) {
+      toast(err.message || 'Error logging hours.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const workloadLabel = stats.userEmployee?.workload || 'Low';
+  const weeklyHours = stats.userEmployee?.weekly_hours || 0;
+  const prodScore = stats.userEmployee?.productivity_score || 0;
+
+  return (
+    <div className="space-y-6">
+      {/* Employee Cards */}
+      <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
+        <StatCard label="My Assigned Projects" value={stats.userProjects.length} accent="#0F6E7C" onClick={() => navigate('/projects')} />
+        <StatCard label="My Logged Hours (Wk)" value={`${weeklyHours}h`} accent="#3E6FD9" onClick={() => navigate('/effort')} />
+        <StatCard label="My Productivity Score" value={`${prodScore}%`} accent="#2E9E5B" onClick={() => navigate('/profile')} />
+        <div className="bg-white border border-slate-200 rounded-[10px] p-4 shadow-sm flex flex-col justify-between">
+          <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">My Workload Status</div>
+          <div className="mt-2.5 flex items-baseline gap-2">
+            <span className="text-xl font-bold text-slate-800">{workloadLabel}</span>
+          </div>
+          <div className="mt-3.5 pt-3 border-t border-slate-100">
+            <Pill tone={riskTone(workloadLabel === 'Overloaded' ? 'High' : workloadLabel === 'High' ? 'Medium' : 'Low')}>{workloadLabel}</Pill>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Employee panels */}
+      <div className="grid md:grid-cols-3 gap-4">
+        {/* Assigned Projects */}
+        <div className="md:col-span-2 bg-white border border-slate-200 rounded-[10px] p-4 shadow-sm">
+          <div className="font-semibold text-[14.5px] mb-1">My Active Assignments</div>
+          <div className="text-[12px] text-slate-500 mb-4 border-b pb-2">Projects you are currently working on</div>
+          <div className="space-y-3.5 max-h-[320px] overflow-y-auto pr-1 notif-scroll">
+            {stats.userProjects.map(p => (
+              <div key={p.id} className="p-3 border border-slate-100 rounded-xl hover:border-slate-200 transition-all bg-slate-50/20">
+                <div className="flex justify-between items-start mb-2">
+                  <div>
+                    <div className="font-semibold text-[13px] text-slate-700">{p.name}</div>
+                    <div className="text-[11px] text-slate-400">{p.project_code} · {p.start_date} → {p.end_date}</div>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <Pill tone={statusTone(p.status)}>{p.status}</Pill>
+                    <Pill tone={riskTone(p.risk?.level)}>{p.risk?.level}</Pill>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 h-1.5 bg-slate-100 rounded overflow-hidden"><div className="h-full bg-teal" style={{ width: `${p.progress}%` }} /></div>
+                  <span className="text-[11px] font-mono-plex">{p.progress}%</span>
+                </div>
+              </div>
+            ))}
+            {!stats.userProjects.length && (
+              <div className="text-slate-400 text-sm py-12 text-center">You are not assigned to any projects at this time.</div>
+            )}
+          </div>
+        </div>
+
+        {/* Quick Log Form */}
+        <div className="bg-white border border-slate-200 rounded-[10px] p-4 shadow-sm flex flex-col justify-between">
+          <div>
+            <div className="font-semibold text-[14.5px] mb-1 flex items-center gap-1 text-teal"><Clock size={16} /> Quick Log Hours</div>
+            <div className="text-[12px] text-slate-500 mb-4">Record your hours directly to the log</div>
+          </div>
+          <form onSubmit={handleQuickLog} className="space-y-3">
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="block text-[11px] text-slate-500 mb-1">Date</label>
+                <input type="date" required className="in" value={logForm.log_date} onChange={e => setLogForm({ ...logForm, log_date: e.target.value })} />
+              </div>
+              <div>
+                <label className="block text-[11px] text-slate-500 mb-1">Hours</label>
+                <input type="number" required min="1" max="24" className="in font-mono-plex" value={logForm.hours} onChange={e => setLogForm({ ...logForm, hours: Number(e.target.value) })} />
+              </div>
+            </div>
+            <div>
+              <label className="block text-[11px] text-slate-500 mb-1">Task description</label>
+              <input type="text" required placeholder="What did you work on?" className="in" value={logForm.task} onChange={e => setLogForm({ ...logForm, task: e.target.value })} />
+            </div>
+            <button type="submit" disabled={submitting} className="w-full py-2 bg-teal text-white rounded-lg text-xs font-semibold hover:bg-teal-light transition-all disabled:opacity-50">
+              {submitting ? 'Logging...' : 'Submit Entry'}
+            </button>
+          </form>
+        </div>
+      </div>
+
+      {/* Notifications */}
+      <div className="bg-white border border-slate-200 rounded-[10px] p-4 shadow-sm">
+        <div className="font-semibold text-[14.5px] mb-3">Recent Notifications</div>
+        <div className="space-y-2">
+          {notifications.map(n => (
+            <div key={n.id} className="p-3 bg-slate-50 border-l-4 rounded-r-lg text-[13px]"
+              style={{ borderLeftColor: n.type === 'risk' ? '#D5514C' : n.type === 'warn' ? '#E2A33D' : '#0F6E7C' }}>
+              <div className="font-semibold text-slate-700">{n.title}</div>
+              <div className="text-[12px] text-slate-500 mt-0.5">{n.message}</div>
+            </div>
+          ))}
+          {!notifications.length && <div className="text-slate-400 text-sm py-4">No notifications yet.</div>}
+        </div>
+      </div>
+      <style>{`.in{width:100%;padding:.4rem .5rem;border-radius:.375rem;font-size:.8rem;border:1px solid #E3E7EE;}`}</style>
+    </div>
+  );
+}

@@ -4,11 +4,11 @@ import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard, Bell, FolderKanban, Users, Building2,
   ShieldAlert, Clock, Sparkles, FileBarChart2, CircleUserRound, Settings,
-  ClipboardList,
+  ClipboardList, FileSpreadsheet,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { t } from '../utils/i18n';
-
+ 
 const NAV = [
   {
     group: null,
@@ -31,6 +31,7 @@ const NAV = [
     items: [
       { to: '/risk', label: 'Risk Prediction', Icon: ShieldAlert, roles: ['Admin', 'Project Manager', 'Employee'] },
       { to: '/effort', label: 'Effort Tracking', Icon: Clock, roles: ['Admin', 'Project Manager', 'Employee'] },
+      { to: '/timesheet', label: 'Timesheet', Icon: FileSpreadsheet, roles: ['Admin', 'Project Manager', 'Employee'] },
       { to: '/reports', label: 'Reports', Icon: FileBarChart2, roles: ['Admin', 'Project Manager', 'Employee'] },
     ]
   },

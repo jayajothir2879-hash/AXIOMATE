@@ -1,5 +1,6 @@
 // src/pages/Clients.jsx
 import React, { useEffect, useMemo, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import Modal from '../components/Modal';
 import { Pill, riskTone, toast } from '../components/UI';
@@ -21,8 +22,15 @@ const EMPTY = {
 
 export default function Clients() {
   const { user } = useAuth();
+  const location = useLocation();
   const [rows, setRows] = useState([]);
-  const [q, setQ] = useState('');
+  const [q, setQ] = useState(location.state?.q || '');
+
+  useEffect(() => {
+    if (location.state?.q !== undefined) {
+      setQ(location.state.q);
+    }
+  }, [location.state]);
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState(EMPTY);
   const [editingId, setEditingId] = useState(null);

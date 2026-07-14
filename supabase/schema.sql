@@ -149,6 +149,12 @@ create table if not exists public.project_outcomes (
   remaining_hours     numeric(6,1) default 0,
   eac_hours           numeric(6,1) default 0,
   percent_complete    int default 0,
+  business_score      integer default 0,
+  technical_score     integer default 0,
+  integration_score   integer default 0,
+  testing_score       integer default 0,
+  data_score          integer default 0,
+  bottom_up_hours     numeric(6,1) default 0,
   created_at          timestamptz default now()
 );
 

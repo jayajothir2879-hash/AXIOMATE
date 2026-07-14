@@ -20,6 +20,7 @@ import Effort from './pages/Effort';
 import Reports from './pages/Reports';
 import Profile from './pages/Profile';
 import Settings from './pages/Settings';
+import Timesheet from './pages/Timesheet';
 
 export default function App() {
   return (
@@ -40,6 +41,7 @@ export default function App() {
           <Route path="/reports" element={<Reports />} />
           <Route path="/risk" element={<Risk />} />
           <Route path="/effort" element={<Effort />} />
+          <Route path="/timesheet" element={<Timesheet />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/settings" element={<Settings />} />
         </Route>

@@ -16,7 +16,13 @@ export default function Projects() {
   const location = useLocation();
   const [projects, setProjects] = useState([]);
   const [clients, setClients] = useState([]);
-  const [q, setQ] = useState('');
+  const [q, setQ] = useState(location.state?.q || '');
+
+  useEffect(() => {
+    if (location.state?.q !== undefined) {
+      setQ(location.state.q);
+    }
+  }, [location.state]);
   const [statusFilter, setStatusFilter] = useState(location.state?.statusFilter || '');
   const [priorityFilter, setPriorityFilter] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
@@ -97,7 +103,7 @@ export default function Projects() {
         <table className="w-full text-[13.5px]">
           <thead>
             <tr className="text-[11.5px] uppercase text-slate-500 border-b border-slate-200">
-              {['Code', 'Project', 'Client', 'Timeline', 'Progress', 'Priority', 'Status', 'Risk', ''].map(h => <th key={h} className="text-left px-3 py-2.5 whitespace-nowrap">{h}</th>)}
+              {['Code', 'Project', 'Client', 'Employees', 'Timeline', 'Progress', 'Priority', 'Status', 'Risk', ''].map(h => <th key={h} className="text-left px-3 py-2.5 whitespace-nowrap">{h}</th>)}
             </tr>
           </thead>
           <tbody>
@@ -106,6 +112,7 @@ export default function Projects() {
                 <td className="px-3 py-2.5 font-mono-plex whitespace-nowrap">{p.project_code}</td>
                 <td className="px-3 py-2.5 font-semibold whitespace-nowrap">{p.name}</td>
                 <td className="px-3 py-2.5 whitespace-nowrap">{p.client_name}</td>
+                <td className="px-3 py-2.5 whitespace-nowrap text-slate-600 max-w-[150px] truncate" title={p.assigned_employees}>{p.assigned_employees || '—'}</td>
                 <td className="px-3 py-2.5 text-[12px] text-slate-500 whitespace-nowrap">{p.start_date} → {p.end_date}</td>
                 <td className="px-3 py-2.5">
                   <div className="flex items-center gap-1.5">
@@ -124,7 +131,7 @@ export default function Projects() {
                 </td>
               </tr>
             ))}
-            {!filtered.length && <tr><td colSpan={9} className="text-center text-slate-400 py-10">No projects match your filters.</td></tr>}
+            {!filtered.length && <tr><td colSpan={10} className="text-center text-slate-400 py-10">No projects match your filters.</td></tr>}
           </tbody>
         </table>
       </div>

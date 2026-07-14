@@ -27,7 +27,7 @@ async function loadProfile(authUser) {
     two_factor: false
   };
 
-  return {
+  const profile = {
     ...baseProfile,
     originalRole: authUser.user_metadata?.role || baseProfile.role || 'Employee',
     theme: baseProfile.theme || 'light',
@@ -38,6 +38,26 @@ async function loadProfile(authUser) {
     weekly_report_ready: baseProfile.weekly_report_ready || false,
     login_alerts: baseProfile.login_alerts !== false,
   };
+
+  if (profile && profile.email) {
+    try {
+      const { data: emp } = await supabase
+        .from('employees')
+        .select('id, profile_id')
+        .eq('email', profile.email)
+        .maybeSingle();
+      if (emp && !emp.profile_id) {
+        await supabase
+          .from('employees')
+          .update({ profile_id: profile.id })
+          .eq('id', emp.id);
+      }
+    } catch (err) {
+      console.error('Error auto-linking employee record:', err);
+    }
+  }
+
+  return profile;
 }
 
 export function AuthProvider({ children }) {

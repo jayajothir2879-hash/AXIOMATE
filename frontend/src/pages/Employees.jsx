@@ -1,5 +1,6 @@
 // src/pages/Employees.jsx
 import React, { useEffect, useMemo, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import Modal from '../components/Modal';
 import { Pill, riskTone, toast } from '../components/UI';
@@ -11,8 +12,15 @@ const EMPTY = { name: '', email: '', phone: '', department: '', designation: '',
 
 export default function Employees() {
   const { user } = useAuth();
+  const location = useLocation();
   const [rows, setRows] = useState([]);
-  const [q, setQ] = useState('');
+  const [q, setQ] = useState(location.state?.q || '');
+
+  useEffect(() => {
+    if (location.state?.q !== undefined) {
+      setQ(location.state.q);
+    }
+  }, [location.state]);
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState(EMPTY);
   const [editingId, setEditingId] = useState(null);
@@ -45,13 +53,24 @@ export default function Employees() {
 
   const save = async () => {
     try {
+      let profileId = null;
+      if (form.email) {
+        const { data: prof } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('email', form.email)
+          .maybeSingle();
+        if (prof) profileId = prof.id;
+      }
+      const payload = { ...form, profile_id: profileId };
+
       if (editingId) {
-        const { error } = await supabase.from('employees').update(form).eq('id', editingId);
+        const { error } = await supabase.from('employees').update(payload).eq('id', editingId);
         if (error) throw error;
       } else {
         const { count } = await supabase.from('employees').select('*', { count: 'exact', head: true });
         const emp_code = 'EMP-' + String((count || 0) + 1).padStart(3, '0');
-        const { error } = await supabase.from('employees').insert({ ...form, emp_code });
+        const { error } = await supabase.from('employees').insert({ ...payload, emp_code });
         if (error) throw error;
       }
       setModalOpen(false); load(); toast('Employee saved successfully.');
@@ -81,7 +100,7 @@ export default function Employees() {
         <table className="w-full text-[13.5px]">
           <thead>
             <tr className="text-[11.5px] uppercase text-slate-500 border-b border-slate-200">
-              {['Code', 'Name', 'Department', 'Designation', 'Daily', 'Weekly', 'Productivity', 'Workload', ''].map(h => <th key={h} className="text-left px-3 py-2.5 whitespace-nowrap">{h}</th>)}
+              {['Code', 'Name', 'Department', 'Designation', 'Projects', 'Daily', 'Weekly', 'Productivity', 'Workload', ''].map(h => <th key={h} className="text-left px-3 py-2.5 whitespace-nowrap">{h}</th>)}
             </tr>
           </thead>
           <tbody>
@@ -91,6 +110,7 @@ export default function Employees() {
                 <td className="px-3 py-2.5 whitespace-nowrap"><div className="font-semibold">{e.name}</div><div className="text-[11.5px] text-slate-500">{e.email}</div></td>
                 <td className="px-3 py-2.5 whitespace-nowrap">{e.department}</td>
                 <td className="px-3 py-2.5 whitespace-nowrap">{e.designation}</td>
+                <td className="px-3 py-2.5 whitespace-nowrap text-slate-600 max-w-[150px] truncate" title={e.assigned_projects}>{e.assigned_projects || '—'}</td>
                 <td className="px-3 py-2.5 whitespace-nowrap">{e.daily_hours}h</td>
                 <td className="px-3 py-2.5 whitespace-nowrap">{e.weekly_hours}h</td>
                 <td className="px-3 py-2.5 whitespace-nowrap">{e.productivity_score}%</td>
@@ -101,7 +121,7 @@ export default function Employees() {
                 </td>
               </tr>
             ))}
-            {!filtered.length && <tr><td colSpan={9} className="text-center text-slate-400 py-10">No employees found.</td></tr>}
+            {!filtered.length && <tr><td colSpan={10} className="text-center text-slate-400 py-10">No employees found.</td></tr>}
           </tbody>
         </table>
       </div>

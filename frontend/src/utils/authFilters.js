@@ -44,6 +44,12 @@ export function filterProjects(projects, employees, user) {
   const userEmpName = userEmployee?.name?.toLowerCase() || '';
   const userName = user.name?.toLowerCase() || '';
 
+  // Get current user's assigned projects list
+  const userAssignedProjects = (userEmployee?.assigned_projects || '')
+    .split(',')
+    .map(s => s.trim().toLowerCase())
+    .filter(Boolean);
+
   return projects.filter(p => {
     const assignedNames = (p.assigned_employees || '')
       .split(',')
@@ -51,8 +57,11 @@ export function filterProjects(projects, employees, user) {
       .filter(Boolean);
 
     // Rule: If current user is explicitly assigned, they can always see it
+    const isProjectAssignedToUser = (p.project_code && userAssignedProjects.includes(p.project_code.toLowerCase())) ||
+                                    (p.name && userAssignedProjects.includes(p.name.toLowerCase()));
     const isUserAssigned = (userEmpName && assignedNames.includes(userEmpName)) || 
-                           (userName && assignedNames.includes(userName));
+                           (userName && assignedNames.includes(userName)) ||
+                           isProjectAssignedToUser;
     if (isUserAssigned) return true;
 
     // If PM: cannot see projects assigned to any Admin (unless assigned themselves, checked above)

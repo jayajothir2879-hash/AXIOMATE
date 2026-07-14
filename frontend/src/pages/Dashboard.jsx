@@ -147,11 +147,7 @@ export default function Dashboard() {
   ];
 
   const isRoleAllowed = (roleVal) => {
-    if (originalRole === 'Admin') return true;
-    if (originalRole === 'Project Manager') {
-      return roleVal === 'Project Manager' || roleVal === 'Employee';
-    }
-    return roleVal === 'Employee';
+    return true;
   };
 
   const handleRoleChange = async (e) => {

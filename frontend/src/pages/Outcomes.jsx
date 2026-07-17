@@ -116,7 +116,7 @@ export default function Outcomes() {
               {!filtered.length && (
                 <tr>
                   <td colSpan={7} className="text-center text-slate-400 py-10">
-                    No projects found matching the criteria.
+                    No project outcomes found matching the search criteria or status filter. Edit projects to add or update outcomes.
                   </td>
                 </tr>
               )}

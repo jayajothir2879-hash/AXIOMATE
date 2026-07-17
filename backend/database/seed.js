@@ -39,6 +39,11 @@ async function seed() {
     console.log('Seeded Clients.');
 
     // ---- Employees ----
+    // Set join dates for profiles
+    await client.query("UPDATE public.profiles SET join_date = '2021-03-15' WHERE email = 'admin@axiocloudsolutions.com'");
+    await client.query("UPDATE public.profiles SET join_date = '2022-01-10' WHERE email = 'pm@axiomate.com'");
+    await client.query("UPDATE public.profiles SET join_date = '2023-06-01' WHERE email = 'employee@axiomate.com'");
+
     // Fetch profiles first to link profile_id to employee records
     const profilesRes = await client.query("SELECT id, email FROM public.profiles");
     const profileMap = {};

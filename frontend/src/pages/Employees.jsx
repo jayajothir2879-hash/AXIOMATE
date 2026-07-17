@@ -162,7 +162,7 @@ export default function Employees() {
                 </td>
               </tr>
             ))}
-            {!filtered.length && <tr><td colSpan={10} className="text-center text-slate-400 py-10">No employees found.</td></tr>}
+            {!filtered.length && <tr><td colSpan={10} className="text-center text-slate-400 py-10">No employees found matching the search query or department filter. Click 'Add Employee' to register a new team member.</td></tr>}
           </tbody>
         </table>
       </div>

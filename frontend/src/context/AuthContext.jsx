@@ -43,17 +43,32 @@ async function loadProfile(authUser) {
     try {
       const { data: emp } = await supabase
         .from('employees')
-        .select('id, profile_id')
+        .select('id, profile_id, phone, designation, department, emp_code')
         .eq('email', profile.email)
         .maybeSingle();
-      if (emp && !emp.profile_id) {
-        await supabase
-          .from('employees')
-          .update({ profile_id: profile.id })
-          .eq('id', emp.id);
+      if (emp) {
+        if (!emp.profile_id) {
+          await supabase
+            .from('employees')
+            .update({ profile_id: profile.id })
+            .eq('id', emp.id);
+        }
+
+        const updates = {};
+        if (!profile.phone && emp.phone) { profile.phone = emp.phone; updates.phone = emp.phone; }
+        if (!profile.designation && emp.designation) { profile.designation = emp.designation; updates.designation = emp.designation; }
+        if (!profile.department && emp.department) { profile.department = emp.department; updates.department = emp.department; }
+        if (!profile.emp_code && emp.emp_code) { profile.emp_code = emp.emp_code; updates.emp_code = emp.emp_code; }
+
+        if (Object.keys(updates).length > 0) {
+          await supabase
+            .from('profiles')
+            .update(updates)
+            .eq('id', profile.id);
+        }
       }
     } catch (err) {
-      console.error('Error auto-linking employee record:', err);
+      console.error('Error auto-linking/populating employee record:', err);
     }
   }
 

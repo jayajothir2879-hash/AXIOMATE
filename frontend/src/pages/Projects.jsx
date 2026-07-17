@@ -175,7 +175,7 @@ export default function Projects() {
                 </td>
               </tr>
             ))}
-            {!filtered.length && <tr><td colSpan={10} className="text-center text-slate-400 py-10">No projects match your filters.</td></tr>}
+            {!filtered.length && <tr><td colSpan={10} className="text-center text-slate-400 py-10">No projects found matching the selected status, priority, or search query. Click 'Add Project' to register a new project deliverable.</td></tr>}
           </tbody>
         </table>
       </div>

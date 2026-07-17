@@ -147,7 +147,7 @@ export default function Clients() {
                 </td>
               </tr>
             ))}
-            {!filtered.length && <tr><td colSpan={9} className="text-center text-slate-400 py-10">No clients found.</td></tr>}
+            {!filtered.length && <tr><td colSpan={9} className="text-center text-slate-400 py-10">No clients found matching the search query or risk level filter. Click 'Add Client' to register a new client profile.</td></tr>}
           </tbody>
         </table>
       </div>

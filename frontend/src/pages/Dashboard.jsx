@@ -277,7 +277,7 @@ function AdminDashboardView({ stats, notifications, navigate }) {
 
       {/* Bottom section */}
       <div className="grid md:grid-cols-3 gap-4">
-        <div className="md:col-span-2 bg-white border border-slate-200 rounded-[10px] p-4 shadow-sm">
+        <div className="bg-white border border-slate-200 rounded-[10px] p-4 shadow-sm h-full flex flex-col justify-between">
           <div className="flex justify-between items-center mb-3">
             <div>
               <div className="font-semibold text-[14.5px]">System Alerts & Logs</div>
@@ -285,7 +285,7 @@ function AdminDashboardView({ stats, notifications, navigate }) {
             </div>
             <button onClick={() => navigate('/notifications')} className="text-[12px] font-semibold text-teal hover:underline">View all</button>
           </div>
-          <div className="space-y-2">
+          <div className="space-y-2 max-h-[250px] overflow-y-auto pr-1 notif-scroll">
             {notifications.map(n => (
               <div key={n.id} className="p-3 bg-slate-50 border-l-4 rounded-r-lg flex justify-between items-start gap-4 text-[13px]"
                 style={{ borderLeftColor: n.type === 'risk' ? '#D5514C' : n.type === 'warn' ? '#E2A33D' : '#0F6E7C' }}>
@@ -300,7 +300,7 @@ function AdminDashboardView({ stats, notifications, navigate }) {
           </div>
         </div>
 
-        <div className="bg-white border border-slate-200 rounded-[10px] p-4 shadow-sm flex flex-col justify-between">
+        <div className="bg-white border border-slate-200 rounded-[10px] p-4 shadow-sm h-full flex flex-col justify-between">
           <div>
             <div className="font-semibold text-[14.5px] mb-1">Administrative Operations</div>
             <div className="text-[12px] text-slate-500 mb-4">Quick links to expand directory settings</div>
@@ -319,6 +319,10 @@ function AdminDashboardView({ stats, notifications, navigate }) {
               <span className="flex items-center gap-2"><ClipboardCheck size={15} className="text-slate-500" /> View Analytics Report</span> <ArrowRight size={13} />
             </button>
           </div>
+        </div>
+
+        <div>
+          <QuickLogHoursCard userEmployee={stats.userEmployee} onLogSave={loadData} />
         </div>
       </div>
     </div>
@@ -382,26 +386,32 @@ function PMDashboardView({ stats, notifications, navigate }) {
         </div>
       </div>
 
-      {/* PM Warnings */}
-      <div className="bg-white border border-slate-200 rounded-[10px] p-4 shadow-sm">
-        <div className="flex justify-between items-center mb-3">
-          <div>
-            <div className="font-semibold text-[14.5px] flex items-center gap-1.5"><ShieldAlert size={16} className="text-amber-500" /> Active Risk Warnings</div>
-            <div className="text-[12px] text-slate-500">Live predictions computed by AI Risk Engine</div>
-          </div>
-          <button onClick={() => navigate('/risk')} className="text-[12px] font-semibold text-teal hover:underline">Mitigate Risk</button>
-        </div>
-        <div className="space-y-2">
-          {notifications.filter(n => n.type === 'risk' || n.type === 'warn').map(n => (
-            <div key={n.id} className="p-3 bg-slate-50 border-l-4 rounded-r-lg text-[13px]"
-              style={{ borderLeftColor: n.type === 'risk' ? '#D5514C' : '#E2A33D' }}>
-              <div className="font-semibold text-slate-700">{n.title}</div>
-              <div className="text-[12px] text-slate-500 mt-0.5">{n.message}</div>
+      {/* PM Warnings & Quick Log */}
+      <div className="grid md:grid-cols-3 gap-4">
+        <div className="md:col-span-2 bg-white border border-slate-200 rounded-[10px] p-4 shadow-sm h-full flex flex-col justify-between">
+          <div className="flex justify-between items-center mb-3">
+            <div>
+              <div className="font-semibold text-[14.5px] flex items-center gap-1.5"><ShieldAlert size={16} className="text-amber-500" /> Active Risk Warnings</div>
+              <div className="text-[12px] text-slate-500">Live predictions computed by AI Risk Engine</div>
             </div>
-          ))}
-          {!notifications.filter(n => n.type === 'risk' || n.type === 'warn').length && (
-            <div className="text-slate-400 text-sm py-4">No risk predictions to display.</div>
-          )}
+            <button onClick={() => navigate('/risk')} className="text-[12px] font-semibold text-teal hover:underline">Mitigate Risk</button>
+          </div>
+          <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1 notif-scroll">
+            {notifications.filter(n => n.type === 'risk' || n.type === 'warn').map(n => (
+              <div key={n.id} className="p-3 bg-slate-50 border-l-4 rounded-r-lg text-[13px]"
+                style={{ borderLeftColor: n.type === 'risk' ? '#D5514C' : '#E2A33D' }}>
+                <div className="font-semibold text-slate-700">{n.title}</div>
+                <div className="text-[12px] text-slate-500 mt-0.5">{n.message}</div>
+              </div>
+            ))}
+            {!notifications.filter(n => n.type === 'risk' || n.type === 'warn').length && (
+              <div className="text-slate-400 text-sm py-4">No risk predictions to display.</div>
+            )}
+          </div>
+        </div>
+
+        <div>
+          <QuickLogHoursCard userEmployee={stats.userEmployee} onLogSave={loadData} />
         </div>
       </div>
     </div>
@@ -409,9 +419,9 @@ function PMDashboardView({ stats, notifications, navigate }) {
 }
 
 /* ==========================================
-   EMPLOYEE DASHBOARD VIEW
+   REUSABLE QUICK LOG HOURS CARD
    ========================================== */
-function EmployeeDashboardView({ stats, notifications, navigate, onLogSave }) {
+function QuickLogHoursCard({ userEmployee, onLogSave }) {
   const [logForm, setLogForm] = useState({
     log_date: new Date().toISOString().slice(0, 10),
     task: '',
@@ -421,7 +431,7 @@ function EmployeeDashboardView({ stats, notifications, navigate, onLogSave }) {
 
   const handleQuickLog = async (e) => {
     e.preventDefault();
-    if (!stats.userEmployee) {
+    if (!userEmployee) {
       toast('No employee record found for your user. Please contact an admin.');
       return;
     }
@@ -430,7 +440,7 @@ function EmployeeDashboardView({ stats, notifications, navigate, onLogSave }) {
       const { error } = await supabase
         .from('work_logs')
         .insert([{
-          employee_id: stats.userEmployee.id,
+          employee_id: userEmployee.id,
           log_date: logForm.log_date,
           task: logForm.task || 'General work',
           hours: Number(logForm.hours)
@@ -447,6 +457,39 @@ function EmployeeDashboardView({ stats, notifications, navigate, onLogSave }) {
     }
   };
 
+  return (
+    <div className="bg-white border border-slate-200 rounded-[10px] p-4 shadow-sm flex flex-col justify-between h-full">
+      <div>
+        <div className="font-semibold text-[14.5px] mb-1 flex items-center gap-1 text-teal"><Clock size={16} /> Quick Log Hours</div>
+        <div className="text-[12px] text-slate-500 mb-4">Record your hours directly to the log</div>
+      </div>
+      <form onSubmit={handleQuickLog} className="space-y-3">
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <label className="block text-[11px] text-slate-500 mb-1">Date</label>
+            <input type="date" required className="in" value={logForm.log_date} onChange={e => setLogForm({ ...logForm, log_date: e.target.value })} />
+          </div>
+          <div>
+            <label className="block text-[11px] text-slate-500 mb-1">Hours</label>
+            <input type="number" required min="1" max="24" className="in font-mono-plex" value={logForm.hours} onChange={e => setLogForm({ ...logForm, hours: Number(e.target.value) })} />
+          </div>
+        </div>
+        <div>
+          <label className="block text-[11px] text-slate-500 mb-1">Task description</label>
+          <input type="text" required placeholder="What did you work on?" className="in" value={logForm.task} onChange={e => setLogForm({ ...logForm, task: e.target.value })} />
+        </div>
+        <button type="submit" disabled={submitting} className="w-full py-2 bg-teal text-white rounded-lg text-xs font-semibold hover:bg-teal-light transition-all disabled:opacity-50">
+          {submitting ? 'Logging...' : 'Submit Entry'}
+        </button>
+      </form>
+    </div>
+  );
+}
+
+/* ==========================================
+   EMPLOYEE DASHBOARD VIEW
+   ========================================== */
+function EmployeeDashboardView({ stats, notifications, navigate, onLogSave }) {
   const workloadLabel = stats.userEmployee?.workload || 'Low';
   const weeklyHours = stats.userEmployee?.weekly_hours || 0;
   const prodScore = stats.userEmployee?.productivity_score || 0;
@@ -501,30 +544,8 @@ function EmployeeDashboardView({ stats, notifications, navigate, onLogSave }) {
         </div>
 
         {/* Quick Log Form */}
-        <div className="bg-white border border-slate-200 rounded-[10px] p-4 shadow-sm flex flex-col justify-between">
-          <div>
-            <div className="font-semibold text-[14.5px] mb-1 flex items-center gap-1 text-teal"><Clock size={16} /> Quick Log Hours</div>
-            <div className="text-[12px] text-slate-500 mb-4">Record your hours directly to the log</div>
-          </div>
-          <form onSubmit={handleQuickLog} className="space-y-3">
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <label className="block text-[11px] text-slate-500 mb-1">Date</label>
-                <input type="date" required className="in" value={logForm.log_date} onChange={e => setLogForm({ ...logForm, log_date: e.target.value })} />
-              </div>
-              <div>
-                <label className="block text-[11px] text-slate-500 mb-1">Hours</label>
-                <input type="number" required min="1" max="24" className="in font-mono-plex" value={logForm.hours} onChange={e => setLogForm({ ...logForm, hours: Number(e.target.value) })} />
-              </div>
-            </div>
-            <div>
-              <label className="block text-[11px] text-slate-500 mb-1">Task description</label>
-              <input type="text" required placeholder="What did you work on?" className="in" value={logForm.task} onChange={e => setLogForm({ ...logForm, task: e.target.value })} />
-            </div>
-            <button type="submit" disabled={submitting} className="w-full py-2 bg-teal text-white rounded-lg text-xs font-semibold hover:bg-teal-light transition-all disabled:opacity-50">
-              {submitting ? 'Logging...' : 'Submit Entry'}
-            </button>
-          </form>
+        <div>
+          <QuickLogHoursCard userEmployee={stats.userEmployee} onLogSave={onLogSave} />
         </div>
       </div>
 

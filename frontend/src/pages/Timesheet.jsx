@@ -26,6 +26,7 @@ export default function Timesheet() {
   const { user } = useAuth();
   const [outcomes, setOutcomes] = useState([]);
   const [projects, setProjects] = useState([]);
+  const [employees, setEmployees] = useState([]);
   const [rate, setRate] = useState(() => Number(localStorage.getItem('blended_rate') || 35.00));
   const [capacity, setCapacity] = useState(() => Number(localStorage.getItem('hours_capacity') || 8));
   
@@ -35,12 +36,14 @@ export default function Timesheet() {
 
   const loadData = async () => {
     try {
-      const [{ data: outcomesRows }, { data: projectsRows }] = await Promise.all([
+      const [{ data: outcomesRows }, { data: projectsRows }, { data: employeeRows }] = await Promise.all([
         supabase.from('project_outcomes').select('*').order('id'),
-        supabase.from('projects').select('id, name, project_code').order('name')
+        supabase.from('projects').select('id, name, project_code').order('name'),
+        supabase.from('employees').select('id, name').order('name')
       ]);
 
       setProjects(projectsRows || []);
+      setEmployees(employeeRows || []);
 
       const parsed = (outcomesRows || []).map(row => {
         let business = row.business_score || 0;
@@ -158,7 +161,8 @@ export default function Timesheet() {
         integration_score: Number(row.integration_score || 0),
         testing_score: Number(row.testing_score || 0),
         data_score: Number(row.data_score || 0),
-        bottom_up_hours: Number(row.bottom_up_hours || 0)
+        bottom_up_hours: Number(row.bottom_up_hours || 0),
+        assignee: row.assignee || ''
       };
 
       const { error } = await supabase
@@ -327,6 +331,7 @@ export default function Timesheet() {
                 <th className="p-2 border border-slate-800 w-[90px]">Version</th>
                 <th className="p-2 border border-slate-800 w-[100px]">Status</th>
                 <th className="p-2 border border-slate-800 w-[200px]">Outcome Title</th>
+                <th className="p-2 border border-slate-800 w-[130px]">Assignee</th>
                 <th className="p-2 border border-slate-800 w-[65px]" title="Business Score">Bus</th>
                 <th className="p-2 border border-slate-800 w-[65px]" title="Technical Score">Tech</th>
                 <th className="p-2 border border-slate-800 w-[65px]" title="Integration Score">Int</th>
@@ -378,6 +383,20 @@ export default function Timesheet() {
                         onChange={e => handleCellChange(row.id, 'title', e.target.value)}
                         className="w-full bg-transparent outline-none px-1 border border-transparent hover:border-slate-300 focus:border-teal rounded py-0.5"
                       />
+                    </td>
+
+                    {/* Assignee */}
+                    <td className="p-1 border border-slate-200">
+                      <select
+                        value={row.assignee || ''}
+                        onChange={e => handleCellChange(row.id, 'assignee', e.target.value)}
+                        className="w-full bg-transparent outline-none py-0.5 text-slate-700"
+                      >
+                        <option value="">— Unassigned —</option>
+                        {employees.map(emp => (
+                          <option key={emp.id} value={emp.name}>{emp.name}</option>
+                        ))}
+                      </select>
                     </td>
 
                     {/* Business */}

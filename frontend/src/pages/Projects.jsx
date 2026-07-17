@@ -16,6 +16,7 @@ export default function Projects() {
   const location = useLocation();
   const [projects, setProjects] = useState([]);
   const [clients, setClients] = useState([]);
+  const [employees, setEmployees] = useState([]);
   const [q, setQ] = useState(location.state?.q || '');
 
   useEffect(() => {
@@ -41,6 +42,7 @@ export default function Projects() {
     const visibleProjects = filterProjects(normalized, employeeRows || [], user);
     setProjects(attachRisk(visibleProjects, employeeRows || []));
     setClients(clientRows || []);
+    setEmployees(employeeRows || []);
   };
   useEffect(() => { load(); }, []);
 
@@ -57,18 +59,60 @@ export default function Projects() {
     setEditingId(p.id); setModalOpen(true);
   };
 
+  const syncEmployeesForProject = async (projCode, selectedNames) => {
+    const { data: allEmps } = await supabase.from('employees').select('id, name, assigned_projects');
+    if (!allEmps) return;
+    
+    for (const emp of allEmps) {
+      const assignedList = emp.assigned_projects
+        ? emp.assigned_projects.split(',').map(s => s.trim()).filter(Boolean)
+        : [];
+      const isAssigned = selectedNames.includes(emp.name);
+      
+      let newList = [...assignedList];
+      if (isAssigned) {
+        if (!newList.includes(projCode)) {
+          newList.push(projCode);
+        }
+      } else {
+        newList = newList.filter(code => code !== projCode);
+      }
+      
+      const newAssignedProjects = newList.join(', ');
+      if (newAssignedProjects !== (emp.assigned_projects || '')) {
+        await supabase
+          .from('employees')
+          .update({ assigned_projects: newAssignedProjects })
+          .eq('id', emp.id);
+      }
+    }
+  };
+
   const save = async () => {
     try {
       const payload = { ...form, client_id: form.client_id || null };
+      let finalProjectCode = '';
+
       if (editingId) {
         const { error } = await supabase.from('projects').update(payload).eq('id', editingId);
         if (error) throw error;
+        const proj = projects.find(p => p.id === editingId);
+        if (proj) finalProjectCode = proj.project_code;
       } else {
         const { count } = await supabase.from('projects').select('*', { count: 'exact', head: true });
         const project_code = 'PRJ-' + String((count || 0) + 1).padStart(3, '0');
+        finalProjectCode = project_code;
         const { error } = await supabase.from('projects').insert({ ...payload, project_code });
         if (error) throw error;
       }
+
+      if (finalProjectCode) {
+        const selectedNames = form.assigned_employees
+          ? form.assigned_employees.split(',').map(s => s.trim()).filter(Boolean)
+          : [];
+        await syncEmployeesForProject(finalProjectCode, selectedNames);
+      }
+
       setModalOpen(false); load(); toast('Project saved successfully.');
     } catch (err) { toast(err.message || 'Unable to save project.'); }
   };
@@ -158,7 +202,37 @@ export default function Projects() {
           <F label="Status">
             <select className="in" value={form.status} onChange={e => setForm({ ...form, status: e.target.value })}><option>Active</option><option>Completed</option><option>Delayed</option><option>On Hold</option></select>
           </F>
-          <F label="Assigned Employees (comma-separated)" full><input className="in" value={form.assigned_employees} onChange={e => setForm({ ...form, assigned_employees: e.target.value })} /></F>
+          <F label="Assign Employees" full>
+            <div className="border border-slate-200 rounded-lg p-3 max-h-[140px] overflow-y-auto bg-slate-50/50 grid grid-cols-2 gap-2 mt-1">
+              {employees.map(emp => {
+                const assignedList = form.assigned_employees
+                  ? form.assigned_employees.split(',').map(s => s.trim()).filter(Boolean)
+                  : [];
+                const isChecked = assignedList.includes(emp.name);
+                const handleToggle = (checked) => {
+                  let newList;
+                  if (checked) {
+                    newList = [...assignedList, emp.name];
+                  } else {
+                    newList = assignedList.filter(name => name !== emp.name);
+                  }
+                  setForm({ ...form, assigned_employees: newList.join(', ') });
+                };
+                return (
+                  <label key={emp.id} className="flex items-center gap-2 text-[12.5px] cursor-pointer hover:bg-slate-100/80 p-1 rounded transition-all">
+                    <input
+                      type="checkbox"
+                      checked={isChecked}
+                      onChange={e => handleToggle(e.target.checked)}
+                      className="rounded text-teal focus:ring-teal border-slate-300 w-3.5 h-3.5"
+                    />
+                    <span className="font-medium text-slate-700">{emp.name}</span>
+                  </label>
+                );
+              })}
+              {!employees.length && <div className="text-slate-400 text-xs col-span-2">No employees available.</div>}
+            </div>
+          </F>
           <F label="Project Outcome" full><textarea className="in" rows={3} value={form.remarks} onChange={e => setForm({ ...form, remarks: e.target.value })} /></F>
         </div>
       </Modal>

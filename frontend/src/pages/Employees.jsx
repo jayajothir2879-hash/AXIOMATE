@@ -14,6 +14,7 @@ export default function Employees() {
   const { user } = useAuth();
   const location = useLocation();
   const [rows, setRows] = useState([]);
+  const [projects, setProjects] = useState([]);
   const [q, setQ] = useState(location.state?.q || '');
 
   useEffect(() => {
@@ -29,9 +30,14 @@ export default function Employees() {
   const canEdit = true;
   const canDelete = true;
 
-  const load = () => supabase.from('employees').select('*, profiles(role)').order('id').then(({ data }) => {
-    setRows(filterEmployees(data || [], user));
-  });
+  const load = () => {
+    supabase.from('employees').select('*, profiles(role)').order('id').then(({ data }) => {
+      setRows(filterEmployees(data || [], user));
+    });
+    supabase.from('projects').select('id, name, project_code').order('project_code').then(({ data }) => {
+      setProjects(data || []);
+    });
+  };
   useEffect(() => { load(); }, []);
 
   const filtered = useMemo(() => rows.filter(e => !q || e.name.toLowerCase().includes(q.toLowerCase()) || (e.department || '').toLowerCase().includes(q.toLowerCase())), [rows, q]);
@@ -49,6 +55,35 @@ export default function Employees() {
       return;
     }
     setForm({ ...EMPTY, ...e }); setEditingId(e.id); setModalOpen(true);
+  };
+
+  const syncProjectsForEmployee = async (empName, selectedProjCodes) => {
+    const { data: allProjs } = await supabase.from('projects').select('id, project_code, assigned_employees');
+    if (!allProjs) return;
+    
+    for (const proj of allProjs) {
+      const assignedList = proj.assigned_employees
+        ? proj.assigned_employees.split(',').map(s => s.trim()).filter(Boolean)
+        : [];
+      const isAssigned = selectedProjCodes.includes(proj.project_code);
+      
+      let newList = [...assignedList];
+      if (isAssigned) {
+        if (!newList.includes(empName)) {
+          newList.push(empName);
+        }
+      } else {
+        newList = newList.filter(name => name !== empName);
+      }
+      
+      const newAssignedEmployees = newList.join(', ');
+      if (newAssignedEmployees !== (proj.assigned_employees || '')) {
+        await supabase
+          .from('projects')
+          .update({ assigned_employees: newAssignedEmployees })
+          .eq('id', proj.id);
+      }
+    }
   };
 
   const save = async () => {
@@ -73,6 +108,12 @@ export default function Employees() {
         const { error } = await supabase.from('employees').insert({ ...payload, emp_code });
         if (error) throw error;
       }
+
+      const selectedProjCodes = form.assigned_projects
+        ? form.assigned_projects.split(',').map(s => s.trim()).filter(Boolean)
+        : [];
+      await syncProjectsForEmployee(form.name, selectedProjCodes);
+
       setModalOpen(false); load(); toast('Employee saved successfully.');
     } catch (err) { toast(err.message || 'Unable to save employee.'); }
   };
@@ -137,7 +178,37 @@ export default function Employees() {
           <F label="Phone"><input className="in" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} /></F>
           <F label="Department"><input className="in" value={form.department} onChange={e => setForm({ ...form, department: e.target.value })} /></F>
           <F label="Designation"><input className="in" value={form.designation} onChange={e => setForm({ ...form, designation: e.target.value })} /></F>
-          <F label="Assigned Projects" full><input className="in" value={form.assigned_projects} onChange={e => setForm({ ...form, assigned_projects: e.target.value })} /></F>
+          <F label="Assign Projects" full>
+            <div className="border border-slate-200 rounded-lg p-3 max-h-[140px] overflow-y-auto bg-slate-50/50 grid grid-cols-2 gap-2 mt-1">
+              {projects.map(proj => {
+                const assignedList = form.assigned_projects
+                  ? form.assigned_projects.split(',').map(s => s.trim()).filter(Boolean)
+                  : [];
+                const isChecked = assignedList.includes(proj.project_code);
+                const handleToggle = (checked) => {
+                  let newList;
+                  if (checked) {
+                    newList = [...assignedList, proj.project_code];
+                  } else {
+                    newList = assignedList.filter(code => code !== proj.project_code);
+                  }
+                  setForm({ ...form, assigned_projects: newList.join(', ') });
+                };
+                return (
+                  <label key={proj.id} className="flex items-center gap-2 text-[12.5px] cursor-pointer hover:bg-slate-100/80 p-1 rounded transition-all">
+                    <input
+                      type="checkbox"
+                      checked={isChecked}
+                      onChange={e => handleToggle(e.target.checked)}
+                      className="rounded text-teal focus:ring-teal border-slate-300 w-3.5 h-3.5"
+                    />
+                    <span className="font-medium text-slate-700">{proj.name} ({proj.project_code})</span>
+                  </label>
+                );
+              })}
+              {!projects.length && <div className="text-slate-400 text-xs col-span-2">No projects available.</div>}
+            </div>
+          </F>
           <F label="Daily Hours"><input type="number" className="in" value={form.daily_hours} onChange={e => setForm({ ...form, daily_hours: Number(e.target.value) })} /></F>
           <F label="Weekly Hours"><input type="number" className="in" value={form.weekly_hours} onChange={e => setForm({ ...form, weekly_hours: Number(e.target.value) })} /></F>
           <F label="Productivity Score"><input type="number" className="in" value={form.productivity_score} onChange={e => setForm({ ...form, productivity_score: Number(e.target.value) })} /></F>

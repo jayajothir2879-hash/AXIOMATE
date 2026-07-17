@@ -16,9 +16,10 @@ import {
 ChartJS.register(ArcElement, BarElement, CategoryScale, LinearScale, Tooltip, Legend);
 
 export default function Dashboard() {
-  const { user, updateProfileRole } = useAuth();
+  const { user } = useAuth();
   const [stats, setStats] = useState(null);
   const [notifications, setNotifications] = useState([]);
+  const [dashboardRole, setDashboardRole] = useState('Employee');
   const navigate = useNavigate();
 
   const loadData = async () => {
@@ -145,11 +146,12 @@ export default function Dashboard() {
 
   useEffect(() => {
     loadData();
+    if (user) {
+      setDashboardRole(user.role || 'Employee');
+    }
   }, [user]);
 
   if (!stats) return <div className="text-slate-400">Loading dashboard…</div>;
-
-  const currentRole = user?.role || 'Employee';
 
   const rolesList = [
     { value: 'Admin', label: 'Admin' },
@@ -157,14 +159,10 @@ export default function Dashboard() {
     { value: 'Employee', label: 'Employee' }
   ];
 
-  const handleRoleChange = async (e) => {
+  const handleRoleChange = (e) => {
     const newRole = e.target.value;
-    try {
-      await updateProfileRole(newRole);
-      toast(`Successfully switched role to: ${newRole}`);
-    } catch (err) {
-      toast(`Failed to update role: ${err.message}`);
-    }
+    setDashboardRole(newRole);
+    toast(`Previewing dashboard as: ${newRole}`);
   };
 
   // Render dashboard based on role
@@ -177,16 +175,16 @@ export default function Dashboard() {
             <Activity className="w-5 h-5" />
           </div>
           <div>
-            <h2 className="text-[14.5px] font-semibold text-slate-800">Role Switcher</h2>
-            <p className="text-[11px] text-slate-500">Switch views to test role-specific dashboards</p>
+            <h2 className="text-[14.5px] font-semibold text-slate-800">Dashboard View Switcher</h2>
+            <p className="text-[11px] text-slate-500">Switch dashboard layouts to preview other roles (actual user permissions are still restricted)</p>
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <label htmlFor="role-select" className="text-[12.5px] font-medium text-slate-600">Select Role:</label>
+          <label htmlFor="role-select" className="text-[12.5px] font-medium text-slate-600">Select Role View:</label>
           <div className="relative">
             <select
               id="role-select"
-              value={currentRole}
+              value={dashboardRole}
               onChange={handleRoleChange}
               className="px-3.5 py-1.5 pr-8 rounded-lg text-[13px] border border-slate-200 bg-white font-medium text-slate-700 shadow-sm focus:outline-none focus:ring-1 focus:ring-teal focus:border-teal transition-all hover:bg-slate-50"
             >
@@ -200,7 +198,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {currentRole === 'Admin' && (
+      {dashboardRole === 'Admin' && (
         <AdminDashboardView
           stats={stats}
           notifications={notifications}
@@ -208,7 +206,7 @@ export default function Dashboard() {
         />
       )}
 
-      {currentRole === 'Project Manager' && (
+      {dashboardRole === 'Project Manager' && (
         <PMDashboardView
           stats={stats}
           notifications={notifications}
@@ -216,7 +214,7 @@ export default function Dashboard() {
         />
       )}
 
-      {currentRole === 'Employee' && (
+      {dashboardRole === 'Employee' && (
         <EmployeeDashboardView
           stats={stats}
           notifications={notifications}

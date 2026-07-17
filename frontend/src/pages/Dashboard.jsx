@@ -203,6 +203,7 @@ export default function Dashboard() {
           stats={stats}
           notifications={notifications}
           navigate={navigate}
+          onLogSave={loadData}
         />
       )}
 
@@ -211,6 +212,7 @@ export default function Dashboard() {
           stats={stats}
           notifications={notifications}
           navigate={navigate}
+          onLogSave={loadData}
         />
       )}
 
@@ -229,7 +231,7 @@ export default function Dashboard() {
 /* ==========================================
    ADMIN DASHBOARD VIEW
    ========================================== */
-function AdminDashboardView({ stats, notifications, navigate }) {
+function AdminDashboardView({ stats, notifications, navigate, onLogSave }) {
   const statusData = {
     labels: Object.keys(stats.statusCounts),
     datasets: [{ data: Object.values(stats.statusCounts), backgroundColor: ['#0F6E7C', '#2E9E5B', '#D5514C', '#93A0B8'], borderRadius: 6 }],
@@ -320,7 +322,7 @@ function AdminDashboardView({ stats, notifications, navigate }) {
         </div>
 
         <div>
-          <QuickLogHoursCard userEmployee={stats.userEmployee} onLogSave={loadData} />
+          <QuickLogHoursCard userEmployee={stats.userEmployee} onLogSave={onLogSave} />
         </div>
       </div>
     </div>
@@ -330,7 +332,7 @@ function AdminDashboardView({ stats, notifications, navigate }) {
 /* ==========================================
    PROJECT MANAGER DASHBOARD VIEW
    ========================================== */
-function PMDashboardView({ stats, notifications, navigate }) {
+function PMDashboardView({ stats, notifications, navigate, onLogSave }) {
   const statusData = {
     labels: Object.keys(stats.statusCounts),
     datasets: [{ data: Object.values(stats.statusCounts), backgroundColor: ['#0F6E7C', '#2E9E5B', '#D5514C', '#93A0B8'], borderRadius: 6 }],
@@ -409,7 +411,7 @@ function PMDashboardView({ stats, notifications, navigate }) {
         </div>
 
         <div>
-          <QuickLogHoursCard userEmployee={stats.userEmployee} onLogSave={loadData} />
+          <QuickLogHoursCard userEmployee={stats.userEmployee} onLogSave={onLogSave} />
         </div>
       </div>
     </div>

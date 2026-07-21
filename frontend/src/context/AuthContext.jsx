@@ -156,11 +156,15 @@ export function AuthProvider({ children }) {
       .update({ role: newRole })
       .eq('id', user.id);
     if (error) throw error;
-    setUser((prev) => ({ ...prev, role: newRole }));
+    setUser((prev) => ({ ...prev, role: newRole, originalRole: newRole }));
+  };
+
+  const setPreviewRole = (newRole) => {
+    setUser((prev) => prev ? { ...prev, role: newRole } : null);
   };
 
   const value = useMemo(
-    () => ({ user, loading, login, verify2FACode, signup, logout, updateUser, updateProfileRole }),
+    () => ({ user, loading, login, verify2FACode, signup, logout, updateUser, updateProfileRole, setPreviewRole }),
     [user, loading, login, signup, logout, updateUser, updateProfileRole]
   );
 

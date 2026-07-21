@@ -89,6 +89,10 @@ export default function Projects() {
   };
 
   const save = async () => {
+    if (user?.originalRole !== 'Admin' && user?.originalRole !== 'Project Manager') {
+      toast("Access Denied: Only Admins and Project Managers can save projects (restricted in Preview Mode).");
+      return;
+    }
     try {
       const payload = { ...form, client_id: form.client_id || null };
       let finalProjectCode = '';
@@ -118,8 +122,8 @@ export default function Projects() {
   };
 
   const remove = async (id) => {
-    if (user?.role !== 'Admin' && user?.role !== 'Project Manager') {
-      toast("Access Denied: Only Admins and Project Managers can delete projects.");
+    if (user?.originalRole !== 'Admin' && user?.originalRole !== 'Project Manager') {
+      toast("Access Denied: Only Admins and Project Managers can delete projects (restricted in Preview Mode).");
       return;
     }
     if (!confirm('Delete this project? This cannot be undone.')) return;
@@ -140,7 +144,7 @@ export default function Projects() {
             <option value="">All Priority</option><option>Low</option><option>Medium</option><option>High</option>
           </select>
         </div>
-        {canEdit && <button onClick={openNew} className="flex items-center gap-1.5 px-4.5 py-2 rounded-lg bg-teal text-white text-sm font-semibold hover:bg-teal-light"><Plus size={15} strokeWidth={2} /> Add Project</button>}
+        {canEdit && <button onClick={openNew} className="flex items-center gap-1.5 px-5 py-2 rounded-lg bg-teal text-white text-sm font-semibold hover:bg-teal-light"><Plus size={15} strokeWidth={2} /> Add Project</button>}
       </div>
 
       <div className="bg-white border border-slate-200 rounded-[10px] shadow-sm overflow-x-auto">

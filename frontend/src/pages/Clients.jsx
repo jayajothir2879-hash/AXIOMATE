@@ -74,6 +74,10 @@ export default function Clients() {
   };
 
   const save = async () => {
+    if (user?.originalRole !== 'Admin' && user?.originalRole !== 'Project Manager') {
+      toast("Access Denied: Only Admins and Project Managers can save clients (restricted in Preview Mode).");
+      return;
+    }
     try {
       const payload = {
         name: form.client_name,
@@ -99,8 +103,8 @@ export default function Clients() {
     } catch (err) { toast(err.message || 'Unable to save client.'); }
   };
   const remove = async (id) => {
-    if (user?.role !== 'Admin' && user?.role !== 'Project Manager') {
-      toast("Access Denied: Only Admins and Project Managers can delete clients.");
+    if (user?.originalRole !== 'Admin' && user?.originalRole !== 'Project Manager') {
+      toast("Access Denied: Only Admins and Project Managers can delete clients (restricted in Preview Mode).");
       return;
     }
     if (!confirm('Delete this client?')) return;
@@ -113,7 +117,7 @@ export default function Clients() {
     <div>
       <div className="flex flex-wrap gap-2.5 items-center justify-between mb-4">
         <input value={q} onChange={e => setQ(e.target.value)} placeholder="Search clients or company…" className="px-3 py-2 rounded-lg text-[13px] border border-slate-200 min-w-[220px]" />
-        {canEdit && <button onClick={openNew} className="flex items-center gap-1.5 px-4.5 py-2 rounded-lg bg-teal text-white text-sm font-semibold hover:bg-teal-light"><Plus size={15} strokeWidth={2} /> Add Client</button>}
+        {canEdit && <button onClick={openNew} className="flex items-center gap-1.5 px-5 py-2 rounded-lg bg-teal text-white text-sm font-semibold hover:bg-teal-light"><Plus size={15} strokeWidth={2} /> Add Client</button>}
       </div>
 
       <div className="bg-white border border-slate-200 rounded-[10px] shadow-sm overflow-x-auto">

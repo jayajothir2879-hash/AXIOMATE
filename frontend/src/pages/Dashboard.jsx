@@ -16,10 +16,9 @@ import {
 ChartJS.register(ArcElement, BarElement, CategoryScale, LinearScale, Tooltip, Legend);
 
 export default function Dashboard() {
-  const { user } = useAuth();
+  const { user, setPreviewRole } = useAuth();
   const [stats, setStats] = useState(null);
   const [notifications, setNotifications] = useState([]);
-  const [dashboardRole, setDashboardRole] = useState('Employee');
   const navigate = useNavigate();
 
   const loadData = async () => {
@@ -146,9 +145,6 @@ export default function Dashboard() {
 
   useEffect(() => {
     loadData();
-    if (user) {
-      setDashboardRole(user.role || 'Employee');
-    }
   }, [user]);
 
   if (!stats) return <div className="text-slate-400">Loading dashboard…</div>;
@@ -161,8 +157,8 @@ export default function Dashboard() {
 
   const handleRoleChange = (e) => {
     const newRole = e.target.value;
-    setDashboardRole(newRole);
-    toast(`Previewing dashboard as: ${newRole}`);
+    setPreviewRole(newRole);
+    toast(`Previewing workspace as: ${newRole}`);
   };
 
   // Render dashboard based on role
@@ -175,8 +171,8 @@ export default function Dashboard() {
             <Activity className="w-5 h-5" />
           </div>
           <div>
-            <h2 className="text-[14.5px] font-semibold text-slate-800">Dashboard View Switcher</h2>
-            <p className="text-[11px] text-slate-500">Switch dashboard layouts to preview other roles (actual user permissions are still restricted)</p>
+            <h2 className="text-[14.5px] font-semibold text-slate-800">Workspace View Switcher</h2>
+            <p className="text-[11px] text-slate-500">Switch workspace layouts to preview other roles (actual user permissions are still restricted)</p>
           </div>
         </div>
         <div className="flex items-center gap-3">
@@ -184,7 +180,7 @@ export default function Dashboard() {
           <div className="relative">
             <select
               id="role-select"
-              value={dashboardRole}
+              value={user?.role || 'Employee'}
               onChange={handleRoleChange}
               className="px-3.5 py-1.5 pr-8 rounded-lg text-[13px] border border-slate-200 bg-white font-medium text-slate-700 shadow-sm focus:outline-none focus:ring-1 focus:ring-teal focus:border-teal transition-all hover:bg-slate-50"
             >
@@ -198,7 +194,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {dashboardRole === 'Admin' && (
+      {user?.role === 'Admin' && (
         <AdminDashboardView
           stats={stats}
           notifications={notifications}
@@ -207,7 +203,7 @@ export default function Dashboard() {
         />
       )}
 
-      {dashboardRole === 'Project Manager' && (
+      {user?.role === 'Project Manager' && (
         <PMDashboardView
           stats={stats}
           notifications={notifications}
@@ -216,7 +212,7 @@ export default function Dashboard() {
         />
       )}
 
-      {dashboardRole === 'Employee' && (
+      {user?.role === 'Employee' && (
         <EmployeeDashboardView
           stats={stats}
           notifications={notifications}

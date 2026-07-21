@@ -26,9 +26,9 @@ export default function Employees() {
   const [form, setForm] = useState(EMPTY);
   const [editingId, setEditingId] = useState(null);
 
-  const canAdd = true;
-  const canEdit = true;
-  const canDelete = true;
+  const canAdd = user?.role === 'Admin';
+  const canEdit = user?.role === 'Admin' || user?.role === 'Project Manager';
+  const canDelete = user?.role === 'Admin';
 
   const load = () => {
     supabase.from('employees').select('*, profiles(role)').order('id').then(({ data }) => {
@@ -87,6 +87,17 @@ export default function Employees() {
   };
 
   const save = async () => {
+    if (editingId) {
+      if (user?.originalRole !== 'Admin' && user?.originalRole !== 'Project Manager') {
+        toast("Access Denied: Only Admins and Project Managers can edit employees (restricted in Preview Mode).");
+        return;
+      }
+    } else {
+      if (user?.originalRole !== 'Admin') {
+        toast("Access Denied: Only Admins can add employees (restricted in Preview Mode).");
+        return;
+      }
+    }
     try {
       let profileId = null;
       if (form.email) {
@@ -118,8 +129,8 @@ export default function Employees() {
     } catch (err) { toast(err.message || 'Unable to save employee.'); }
   };
   const remove = async (id) => {
-    if (user?.role !== 'Admin') {
-      toast("Access Denied: Only Admins can delete employees.");
+    if (user?.originalRole !== 'Admin') {
+      toast("Access Denied: Only Admins can delete employees (restricted in Preview Mode).");
       return;
     }
     if (!confirm('Delete this employee?')) return;
@@ -134,7 +145,7 @@ export default function Employees() {
     <div>
       <div className="flex flex-wrap gap-2.5 items-center justify-between mb-4">
         <input value={q} onChange={e => setQ(e.target.value)} placeholder="Search employees, dept…" className="px-3 py-2 rounded-lg text-[13px] border border-slate-200 min-w-[220px]" />
-        {canAdd && <button onClick={openNew} className="flex items-center gap-1.5 px-4.5 py-2 rounded-lg bg-teal text-white text-sm font-semibold hover:bg-teal-light"><Plus size={15} strokeWidth={2} /> Add Employee</button>}
+        {canAdd && <button onClick={openNew} className="flex items-center gap-1.5 px-5 py-2 rounded-lg bg-teal text-white text-sm font-semibold hover:bg-teal-light"><Plus size={15} strokeWidth={2} /> Add Employee</button>}
       </div>
 
       <div className="bg-white border border-slate-200 rounded-[10px] shadow-sm overflow-x-auto">

@@ -112,32 +112,32 @@ export default function Risk() {
       </div>
 
       {/* Aggregate Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3.5">
-        <div className="bg-white border border-slate-200 rounded-[10px] p-3 shadow-sm flex flex-col justify-between">
-          <span className="text-[10px] uppercase font-semibold text-slate-500 tracking-wider">Total Evaluated</span>
-          <span className="text-[20px] font-bold text-slate-800 mt-1">{stats.total}</span>
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+        <div className="bg-white border border-slate-200/80 rounded-xl p-4 shadow-sm flex flex-col justify-between hover:border-slate-300/80 transition-all">
+          <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Total Evaluated</span>
+          <span className="text-2xl font-bold text-slate-800 mt-1">{stats.total}</span>
         </div>
-        <div className="bg-white border border-slate-200 rounded-[10px] p-3 shadow-sm flex flex-col justify-between border-l-4 border-l-rose-500">
-          <span className="text-[10px] uppercase font-semibold text-red tracking-wider">High Risk</span>
-          <span className="text-[20px] font-bold text-red mt-1">{stats.high}</span>
+        <div className="bg-white border border-slate-200/80 rounded-xl p-4 shadow-sm flex flex-col justify-between border-l-4 border-l-rose-500 hover:border-slate-300/80 transition-all">
+          <span className="text-[10px] uppercase font-bold text-red tracking-wider">High Risk</span>
+          <span className="text-2xl font-bold text-red mt-1">{stats.high}</span>
         </div>
-        <div className="bg-white border border-slate-200 rounded-[10px] p-3 shadow-sm flex flex-col justify-between border-l-4 border-l-amber-500">
-          <span className="text-[10px] uppercase font-semibold text-amber-600 tracking-wider">Medium Risk</span>
-          <span className="text-[20px] font-bold text-amber-600 mt-1">{stats.medium}</span>
+        <div className="bg-white border border-slate-200/80 rounded-xl p-4 shadow-sm flex flex-col justify-between border-l-4 border-l-amber-500 hover:border-slate-300/80 transition-all">
+          <span className="text-[10px] uppercase font-bold text-amber-600 tracking-wider">Medium Risk</span>
+          <span className="text-2xl font-bold text-amber-600 mt-1">{stats.medium}</span>
         </div>
-        <div className="bg-white border border-slate-200 rounded-[10px] p-3 shadow-sm flex flex-col justify-between border-l-4 border-l-emerald-500">
-          <span className="text-[10px] uppercase font-semibold text-green tracking-wider">Low Risk</span>
-          <span className="text-[20px] font-bold text-green mt-1">{stats.low}</span>
+        <div className="bg-white border border-slate-200/80 rounded-xl p-4 shadow-sm flex flex-col justify-between border-l-4 border-l-emerald-500 hover:border-slate-300/80 transition-all">
+          <span className="text-[10px] uppercase font-bold text-green tracking-wider">Low Risk</span>
+          <span className="text-2xl font-bold text-green mt-1">{stats.low}</span>
         </div>
-        <div className="bg-white border border-slate-200 rounded-[10px] p-3 shadow-sm flex flex-col justify-between col-span-2 md:col-span-1">
-          <span className="text-[10px] uppercase font-semibold text-slate-500 tracking-wider">Average Risk Score</span>
-          <span className="text-[20px] font-bold text-slate-800 mt-1">{stats.avgScore}/100</span>
+        <div className="bg-white border border-slate-200/80 rounded-xl p-4 shadow-sm flex flex-col justify-between col-span-2 md:col-span-1 hover:border-slate-300/80 transition-all">
+          <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Average Risk Score</span>
+          <span className="text-2xl font-bold text-slate-800 mt-1">{stats.avgScore}/100</span>
         </div>
       </div>
 
       {/* Filter Bar */}
-      <div className="flex flex-wrap gap-2.5 items-center bg-white border border-slate-200 rounded-[10px] p-3.5 shadow-sm">
-        <div className="flex flex-wrap gap-2.5 flex-1">
+      <div className="flex flex-wrap gap-3 items-center bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+        <div className="flex flex-wrap gap-3 flex-1">
           <div className="relative min-w-[240px] flex-1 max-w-sm">
             <span className="absolute inset-y-0 left-3 flex items-center text-slate-400">
               <Search size={14} />
@@ -152,7 +152,7 @@ export default function Risk() {
           <select
             value={riskFilter}
             onChange={e => setRiskFilter(e.target.value)}
-            className="px-2.5 py-1.5 rounded-lg text-[13px] border border-slate-200 bg-white"
+            className="px-2.5 py-1.5 rounded-lg text-[13px] border border-slate-200 bg-white focus:outline-none focus:ring-1 focus:ring-teal"
           >
             <option value="">All Risk Levels</option>
             <option value="High">High Risk</option>
@@ -162,7 +162,7 @@ export default function Risk() {
         </div>
         <button
           onClick={load}
-          className="p-1.5 border border-slate-200 rounded-lg hover:bg-slate-50 text-slate-500 hover:text-slate-800 transition"
+          className="p-2 border border-slate-200 rounded-lg hover:bg-slate-50 text-slate-500 hover:text-slate-800 transition"
           title="Refresh Analysis"
         >
           <RefreshCw size={14} />
@@ -170,61 +170,96 @@ export default function Risk() {
       </div>
 
       {/* Risk Cards Grid */}
-      <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))' }}>
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
         {filteredProjects.map(p => {
           const riskLvl = p.risk?.level || 'Low';
           const riskColor = colorFor(riskLvl);
 
           return (
-            <div key={p.id} className="bg-white border border-slate-200 rounded-[10px] p-4.5 shadow-sm flex flex-col justify-between hover:border-slate-300 transition hover:shadow-md">
+            <div 
+              key={p.id} 
+              className="bg-white border border-slate-200/80 rounded-xl p-5 shadow-sm flex flex-col justify-between hover:border-slate-300 hover:shadow-md transition-all duration-300 bg-gradient-to-b from-white to-slate-50/10"
+            >
               <div>
-                <div className="flex gap-3.5 items-start">
-                  <RiskRing score={p.risk?.score || 0} color={riskColor} />
-                  <div className="flex-1 min-w-0">
-                    <div className="font-bold text-[14px] text-slate-800 truncate" title={p.name}>{p.name}</div>
-                    <div className="text-[11.5px] text-slate-500 truncate mb-1.5">{p.client_name} · <span className="font-mono-plex">{p.project_code}</span></div>
-                    <div className="flex flex-wrap gap-1 items-center">
-                      <Pill tone={riskTone(riskLvl)}>{riskLvl}</Pill>
+                <div className="flex justify-between items-start gap-4">
+                  <div className="min-w-0 space-y-1">
+                    <div className="font-bold text-[15px] text-slate-800 tracking-tight leading-snug truncate" title={p.name}>
+                      {p.name}
+                    </div>
+                    <div className="text-[12px] text-slate-500 flex items-center gap-1.5 flex-wrap">
+                      <span className="font-semibold text-slate-600">{p.client_name}</span>
+                      <span className="text-slate-300">•</span>
+                      <span className="font-mono-plex font-medium bg-slate-100 px-1.5 py-0.5 rounded text-[10px] text-slate-500 border border-slate-200/40">
+                        {p.project_code}
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5 mt-2">
+                      <Pill tone={riskTone(riskLvl)}>{riskLvl} Risk</Pill>
                       <Pill tone={statusTone(p.status)}>{p.status}</Pill>
                     </div>
                   </div>
+                  <RiskRing score={p.risk?.score || 0} color={riskColor} />
                 </div>
 
-                <div className="mt-4 pt-3.5 border-t border-slate-100">
-                  <div className="flex justify-between items-center text-[11px] text-slate-400 font-semibold mb-1">
+                <div className="mt-5 pt-4 border-t border-slate-100">
+                  <div className="flex justify-between items-center text-[11px] text-slate-400 font-bold tracking-wider mb-2">
                     <span>TIMELINE & PACE</span>
-                    <span>{p.progress}% Complete</span>
+                    <span className="text-slate-700 font-bold">{p.progress}% Complete</span>
                   </div>
-                  <div className="flex items-center gap-2 mb-3">
-                    <div className="flex-1 h-1.5 bg-slate-100 rounded overflow-hidden">
-                      <div className="h-full bg-teal" style={{ width: `${p.progress}%` }} />
-                    </div>
+                  <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden mb-3">
+                    <div className="h-full bg-teal" style={{ width: `${p.progress}%` }} />
                   </div>
                   {p.start_date && p.end_date && (
-                    <div className="flex items-center gap-1 text-[11px] text-slate-500 mb-4">
-                      <Calendar size={12} className="text-slate-400" />
-                      <span>{p.start_date} → {p.end_date}</span>
-                      <span className="text-[10px] text-slate-400 font-mono-plex ml-auto">({p.risk?.daysLeft || 0} days remaining)</span>
+                    <div className="flex items-center gap-1.5 text-[11px] text-slate-500 font-medium">
+                      <Calendar size={13} className="text-slate-400 flex-none" />
+                      <span className="font-mono-plex text-[10.5px]">{p.start_date} → {p.end_date}</span>
+                      <span className={`text-[10px] font-semibold ml-auto font-mono-plex ${
+                        p.status === 'Completed'
+                          ? 'text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-100'
+                          : (p.risk?.daysLeft || 0) < 0
+                            ? 'text-rose-600 font-bold bg-rose-50 px-1.5 py-0.5 rounded border border-rose-100'
+                            : 'text-slate-400'
+                      }`}>
+                        {p.status === 'Completed'
+                          ? 'Completed'
+                          : (p.risk?.daysLeft || 0) < 0
+                            ? `${Math.abs(p.risk?.daysLeft || 0)}d overdue`
+                            : `${p.risk?.daysLeft || 0}d remaining`}
+                      </span>
                     </div>
                   )}
                 </div>
 
-                <div className="space-y-2">
-                  <div className="text-[11px] font-semibold text-slate-400 tracking-wider">RISK ATTRIBUTION</div>
-                  <ul className="pl-3.5 text-[12px] leading-relaxed list-disc text-slate-600 space-y-1">
-                    {(p.risk?.reasons || []).map((r, i) => (
-                      <li key={i}>{r}</li>
-                    ))}
-                  </ul>
+                <div className="mt-5 pt-4 border-t border-slate-100 flex-grow">
+                  <div className="text-[11px] font-bold text-slate-400 tracking-wider mb-2">RISK ATTRIBUTION</div>
+                  <div className="space-y-1.5">
+                    {(p.risk?.reasons || []).map((r, i) => {
+                      const isPositive = r.includes('tracking on schedule') || r.includes('balanced team workload');
+                      return (
+                        <div key={i} className={`flex items-start gap-2.5 text-[11.5px] p-2.5 rounded-lg border transition-colors ${
+                          isPositive 
+                            ? 'bg-emerald-50/40 text-emerald-800 border-emerald-100/30' 
+                            : 'bg-rose-50/40 text-rose-800 border-rose-100/30'
+                        }`}>
+                          {isPositive ? (
+                            <ShieldCheck size={14} className="text-emerald-500 mt-0.5 flex-none" />
+                          ) : (
+                            <ShieldAlert size={14} className="text-rose-500 mt-0.5 flex-none" />
+                          )}
+                          <span className="leading-normal">{r}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
 
               <div className="mt-5 pt-3.5 border-t border-slate-100 flex justify-end">
                 <button
                   onClick={() => openMitigate(p)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 border border-slate-200 text-slate-600 hover:bg-teal hover:border-teal hover:text-white rounded-lg text-xs font-semibold transition"
+                  className="flex items-center gap-1.5 px-3.5 py-1.5 bg-slate-50 border border-slate-200 text-slate-600 hover:bg-teal hover:border-teal hover:text-white rounded-lg text-[11.5px] font-semibold shadow-sm hover:shadow transition-all duration-200"
                 >
-                  Mitigate Risk <ArrowRight size={12} />
+                  Mitigate Risk <ArrowRight size={13} />
                 </button>
               </div>
             </div>

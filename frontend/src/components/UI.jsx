@@ -46,7 +46,7 @@ export function ToastRoot() {
   return (
     <div className="fixed bottom-6 right-6 z-[200] flex flex-col gap-2 items-end">
       {items.map(i => (
-        <div key={i.id} className="bg-navy-950 text-white px-4.5 py-3 rounded-lg text-[13.5px] shadow-xl">{i.msg}</div>
+        <div key={i.id} className="bg-navy-950 text-white px-5 py-3 rounded-lg text-[13.5px] shadow-xl">{i.msg}</div>
       ))}
     </div>
   );

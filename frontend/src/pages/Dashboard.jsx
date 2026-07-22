@@ -8,6 +8,7 @@ import { attachRisk } from '../utils/riskEngine';
 import { StatCard, Pill, riskTone, statusTone, priorityTone, toast } from '../components/UI';
 import { useAuth } from '../context/AuthContext';
 import { filterEmployees, filterProjects, filterNotifications } from '../utils/authFilters';
+import { buildNameTooltipOptions } from '../utils/chartTooltips';
 import {
   Clock, Plus, TriangleAlert, TrendingDown, FolderKanban,
   Users, Building2, ClipboardCheck, ArrowRight, Activity, ShieldAlert
@@ -138,7 +139,9 @@ export default function Dashboard() {
       workloadCounts,
       userEmployee,
       userProjects,
-      projects: withRisk
+      projects: withRisk,
+      employees: visibleEmployees,
+      clients: clients || []
     });
     setNotifications(filteredNotifs.slice(0, 5));
   };
@@ -172,7 +175,7 @@ export default function Dashboard() {
           </div>
           <div>
             <h2 className="text-[14.5px] font-semibold text-slate-800">Workspace View Switcher</h2>
-            <p className="text-[11px] text-slate-500">Switch workspace layouts to preview other roles (actual user permissions are still restricted)</p>
+            <p className="text-[11px] text-slate-500">Switch workspace layouts to preview other roles</p>
           </div>
         </div>
         <div className="flex items-center gap-3">
@@ -233,6 +236,12 @@ function AdminDashboardView({ stats, notifications, navigate, onLogSave }) {
     datasets: [{ data: Object.values(stats.statusCounts), backgroundColor: ['#0F6E7C', '#2E9E5B', '#D5514C', '#93A0B8'], borderRadius: 6 }],
   };
 
+  const statusOptions = buildNameTooltipOptions((category) => {
+    return (stats.projects || [])
+      .filter(p => p.status === category)
+      .map(p => `${p.name} (${p.project_code || 'N/A'})`);
+  });
+
   const workloadData = {
     labels: ['Low', 'Medium', 'High', 'Overloaded'],
     datasets: [{
@@ -247,6 +256,61 @@ function AdminDashboardView({ stats, notifications, navigate, onLogSave }) {
     }]
   };
 
+  const workloadOptions = buildNameTooltipOptions((category) => {
+    return (stats.employees || [])
+      .filter(e => (e.workload || 'Low') === category)
+      .map(e => `${e.name} — ${e.designation || 'Staff'} (${e.weekly_hours || 0}h/wk)`);
+  });
+
+  // Client Level Chart Data & Options
+  const clientRiskCounts = { Low: 0, Medium: 0, High: 0 };
+  (stats.clients || []).forEach(c => {
+    const level = c.risk_level || 'Low';
+    clientRiskCounts[level] = (clientRiskCounts[level] || 0) + 1;
+  });
+
+  const clientLevelData = {
+    labels: ['Low Risk', 'Medium Risk', 'High Risk'],
+    datasets: [{
+      data: [clientRiskCounts.Low, clientRiskCounts.Medium, clientRiskCounts.High],
+      backgroundColor: ['#0F6E7C', '#E2A33D', '#D5514C'],
+      borderRadius: 6
+    }]
+  };
+
+  const clientLevelOptions = buildNameTooltipOptions((category) => {
+    const levelKey = category.replace(' Risk', '');
+    return (stats.clients || [])
+      .filter(c => (c.risk_level || 'Low') === levelKey)
+      .map(c => `${c.name}${c.company ? ' (' + c.company + ')' : ''}${c.contact_person ? ' · Contact: ' + c.contact_person : ''}`);
+  });
+
+  // Employee Performance Level Chart Data & Options
+  const empTiers = { 'High Performer (80-100%)': [], 'Steady (50-79%)': [], 'Needs Attention (<50%)': [] };
+  (stats.employees || []).forEach(e => {
+    const score = Number(e.productivity_score) || 0;
+    if (score >= 80) empTiers['High Performer (80-100%)'].push(e);
+    else if (score >= 50) empTiers['Steady (50-79%)'].push(e);
+    else empTiers['Needs Attention (<50%)'].push(e);
+  });
+
+  const empLevelData = {
+    labels: ['High Performer (80-100%)', 'Steady (50-79%)', 'Needs Attention (<50%)'],
+    datasets: [{
+      data: [
+        empTiers['High Performer (80-100%)'].length,
+        empTiers['Steady (50-79%)'].length,
+        empTiers['Needs Attention (<50%)'].length
+      ],
+      backgroundColor: ['#2E9E5B', '#3E6FD9', '#D5514C'],
+      borderRadius: 6
+    }]
+  };
+
+  const empLevelOptions = buildNameTooltipOptions((category) => {
+    return (empTiers[category] || []).map(e => `${e.name} — ${e.designation || 'Staff'} (Score: ${e.productivity_score || 0}%)`);
+  });
+
   return (
     <div className="space-y-6">
       {/* Cards */}
@@ -257,17 +321,35 @@ function AdminDashboardView({ stats, notifications, navigate, onLogSave }) {
         <StatCard label="Total Employees" value={stats.totalEmployees} accent="#1B2436" onClick={() => navigate('/employees')} />
       </div>
 
-      {/* Charts */}
+      {/* Charts Grid */}
       <div className="grid md:grid-cols-2 gap-4">
         <div className="bg-white border border-slate-200 rounded-[10px] p-4 shadow-sm">
           <div className="font-semibold text-[14.5px]">Resource Workload Allocation</div>
-          <div className="text-[12px] text-slate-500 mb-3">Overall breakdown of workforce utilization</div>
-          <Bar data={workloadData} options={{ plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }} height={200} />
+          <div className="text-[12px] text-slate-500 mb-3">Workforce utilization</div>
+          <div className="h-[200px]">
+            <Bar data={workloadData} options={workloadOptions} />
+          </div>
         </div>
         <div className="bg-white border border-slate-200 rounded-[10px] p-4 shadow-sm">
           <div className="font-semibold text-[14.5px]">Projects by Status</div>
-          <div className="text-[12px] text-slate-500 mb-3">Vitals from active client deliverables</div>
-          <Bar data={statusData} options={{ plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }} height={200} />
+          <div className="text-[12px] text-slate-500 mb-3">Vitals from active deliverables</div>
+          <div className="h-[200px]">
+            <Bar data={statusData} options={statusOptions} />
+          </div>
+        </div>
+        <div className="bg-white border border-slate-200 rounded-[10px] p-4 shadow-sm">
+          <div className="font-semibold text-[14.5px]">Client Risk & Engagement Levels</div>
+          <div className="text-[12px] text-slate-500 mb-3">Portfolio breakdown by client tier</div>
+          <div className="h-[200px]">
+            <Bar data={clientLevelData} options={clientLevelOptions} />
+          </div>
+        </div>
+        <div className="bg-white border border-slate-200 rounded-[10px] p-4 shadow-sm">
+          <div className="font-semibold text-[14.5px]">Employee Performance Levels</div>
+          <div className="text-[12px] text-slate-500 mb-3">Productivity tier distribution</div>
+          <div className="h-[200px]">
+            <Bar data={empLevelData} options={empLevelOptions} />
+          </div>
         </div>
       </div>
 
@@ -334,6 +416,12 @@ function PMDashboardView({ stats, notifications, navigate, onLogSave }) {
     datasets: [{ data: Object.values(stats.statusCounts), backgroundColor: ['#0F6E7C', '#2E9E5B', '#D5514C', '#93A0B8'], borderRadius: 6 }],
   };
 
+  const statusOptions = buildNameTooltipOptions((category) => {
+    return (stats.projects || [])
+      .filter(p => p.status === category)
+      .map(p => `${p.name} (${p.project_code || 'N/A'})`);
+  });
+
   // Delayed / high-risk project watch list
   const pmWatchlist = stats.projects.filter(p => p.status === 'Delayed' || p.risk?.level === 'High');
 
@@ -378,7 +466,9 @@ function PMDashboardView({ stats, notifications, navigate, onLogSave }) {
             <div className="font-semibold text-[14.5px] mb-1">Project Status Breakdown</div>
             <div className="text-[12px] text-slate-500 mb-4">Overall project delivery stats</div>
           </div>
-          <Bar data={statusData} options={{ plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }} height={200} />
+          <div className="h-[200px]">
+            <Bar data={statusData} options={statusOptions} />
+          </div>
         </div>
       </div>
 

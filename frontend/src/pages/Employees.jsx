@@ -1,12 +1,17 @@
 // src/pages/Employees.jsx
 import React, { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
+import { Bar } from 'react-chartjs-2';
+import { Chart as ChartJS, BarElement, CategoryScale, LinearScale, Tooltip, Legend } from 'chart.js';
 import { supabase } from '../lib/supabaseClient';
 import Modal from '../components/Modal';
 import { Pill, riskTone, toast } from '../components/UI';
 import { useAuth } from '../context/AuthContext';
 import { Pencil, Trash2, Plus } from 'lucide-react';
 import { filterEmployees } from '../utils/authFilters';
+import { buildNameTooltipOptions } from '../utils/chartTooltips';
+
+ChartJS.register(BarElement, CategoryScale, LinearScale, Tooltip, Legend);
 
 const EMPTY = { name: '', email: '', phone: '', department: '', designation: '', assigned_projects: '', daily_hours: 0, weekly_hours: 0, productivity_score: 0, workload: 'Low' };
 
@@ -41,6 +46,30 @@ export default function Employees() {
   useEffect(() => { load(); }, []);
 
   const filtered = useMemo(() => rows.filter(e => !q || e.name.toLowerCase().includes(q.toLowerCase()) || (e.department || '').toLowerCase().includes(q.toLowerCase())), [rows, q]);
+
+  const empWorkloadCounts = useMemo(() => {
+    const counts = { Low: 0, Medium: 0, High: 0, Overloaded: 0 };
+    rows.forEach(e => {
+      const w = e.workload || 'Low';
+      counts[w] = (counts[w] || 0) + 1;
+    });
+    return counts;
+  }, [rows]);
+
+  const empChartData = useMemo(() => ({
+    labels: ['Low', 'Medium', 'High', 'Overloaded'],
+    datasets: [{
+      data: [empWorkloadCounts.Low, empWorkloadCounts.Medium, empWorkloadCounts.High, empWorkloadCounts.Overloaded],
+      backgroundColor: ['#2E9E5B', '#E2A33D', '#D5514C', '#952A25'],
+      borderRadius: 6
+    }]
+  }), [empWorkloadCounts]);
+
+  const empChartOptions = useMemo(() => buildNameTooltipOptions((category) => {
+    return rows
+      .filter(e => (e.workload || 'Low') === category)
+      .map(e => `${e.name} — ${e.designation || 'Staff'} (${e.weekly_hours || 0}h/wk · Score: ${e.productivity_score || 0}%)`);
+  }), [rows]);
 
   const openNew = () => {
     if (user?.role !== 'Admin') {
@@ -142,7 +171,16 @@ export default function Employees() {
   const riskLabel = (w) => (w === 'Overloaded' ? 'High' : w === 'High' ? 'Medium' : 'Low');
 
   return (
-    <div>
+    <div className="space-y-4">
+      {/* Employee Workload & Level Graph */}
+      <div className="bg-white border border-slate-200 rounded-[10px] p-4 shadow-sm">
+        <div className="font-semibold text-[14.5px]">Employee Workload & Capacity Level</div>
+        <div className="text-[12px] text-slate-500 mb-3">Workforce utilization breakdown</div>
+        <div className="h-[180px]">
+          <Bar data={empChartData} options={empChartOptions} />
+        </div>
+      </div>
+
       <div className="flex flex-wrap gap-2.5 items-center justify-between mb-4">
         <input value={q} onChange={e => setQ(e.target.value)} placeholder="Search employees, dept…" className="px-3 py-2 rounded-lg text-[13px] border border-slate-200 min-w-[220px]" />
         {canAdd && <button onClick={openNew} className="flex items-center gap-1.5 px-5 py-2 rounded-lg bg-teal text-white text-sm font-semibold hover:bg-teal-light"><Plus size={15} strokeWidth={2} /> Add Employee</button>}

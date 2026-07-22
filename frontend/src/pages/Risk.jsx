@@ -1,10 +1,15 @@
 // src/pages/Risk.jsx
 import React, { useEffect, useMemo, useState } from 'react';
+import { Bar } from 'react-chartjs-2';
+import { Chart as ChartJS, BarElement, CategoryScale, LinearScale, Tooltip, Legend } from 'chart.js';
 import { supabase } from '../lib/supabaseClient';
 import { attachRisk } from '../utils/riskEngine';
 import { Pill, riskTone, statusTone, priorityTone, toast } from '../components/UI';
 import Modal from '../components/Modal';
 import { ShieldAlert, ShieldCheck, ShieldQuestion, Search, Calendar, RefreshCw, AlertTriangle, ArrowRight } from 'lucide-react';
+import { buildNameTooltipOptions } from '../utils/chartTooltips';
+
+ChartJS.register(BarElement, CategoryScale, LinearScale, Tooltip, Legend);
 
 function RiskRing({ score, color }) {
   const r = 24, c = 2 * Math.PI * r, off = c - (score / 100) * c;
@@ -98,6 +103,22 @@ export default function Risk() {
     }
   };
 
+  const riskChartData = useMemo(() => ({
+    labels: ['Low Risk', 'Medium Risk', 'High Risk'],
+    datasets: [{
+      data: [stats.low, stats.medium, stats.high],
+      backgroundColor: ['#2E9E5B', '#E2A33D', '#D5514C'],
+      borderRadius: 6
+    }]
+  }), [stats]);
+
+  const riskChartOptions = useMemo(() => buildNameTooltipOptions((category) => {
+    const levelKey = category.replace(' Risk', '');
+    return projects
+      .filter(p => p.risk?.level === levelKey)
+      .map(p => `${p.name} (${p.project_code || 'N/A'}) · Score: ${p.risk?.score || 0}`);
+  }), [projects]);
+
   const colorFor = (level) => (level === 'High' ? '#D5514C' : level === 'Medium' ? '#E2A33D' : '#2E9E5B');
 
   return (
@@ -132,6 +153,15 @@ export default function Risk() {
         <div className="bg-white border border-slate-200/80 rounded-xl p-4 shadow-sm flex flex-col justify-between col-span-2 md:col-span-1 hover:border-slate-300/80 transition-all">
           <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Average Risk Score</span>
           <span className="text-2xl font-bold text-slate-800 mt-1">{stats.avgScore}/100</span>
+        </div>
+      </div>
+
+      {/* Risk Distribution Graph */}
+      <div className="bg-white border border-slate-200 rounded-[10px] p-4 shadow-sm">
+        <div className="font-semibold text-[14.5px]">Project Risk Distribution Matrix</div>
+        <div className="text-[12px] text-slate-500 mb-3">Portfolio risk classification</div>
+        <div className="h-[180px]">
+          <Bar data={riskChartData} options={riskChartOptions} />
         </div>
       </div>
 

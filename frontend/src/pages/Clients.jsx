@@ -1,12 +1,17 @@
 // src/pages/Clients.jsx
 import React, { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
+import { Bar } from 'react-chartjs-2';
+import { Chart as ChartJS, BarElement, CategoryScale, LinearScale, Tooltip, Legend } from 'chart.js';
 import { supabase } from '../lib/supabaseClient';
 import Modal from '../components/Modal';
 import { Pill, riskTone, toast } from '../components/UI';
 import { useAuth } from '../context/AuthContext';
 import { Pencil, Trash2, Plus } from 'lucide-react';
 import { filterProjects, filterEmployees } from '../utils/authFilters';
+import { buildNameTooltipOptions } from '../utils/chartTooltips';
+
+ChartJS.register(BarElement, CategoryScale, LinearScale, Tooltip, Legend);
 
 const EMPTY = {
   client_name: '',
@@ -66,6 +71,31 @@ export default function Clients() {
   [rows, q]
 );
 
+  const clientRiskCounts = useMemo(() => {
+    const counts = { 'Low Risk': 0, 'Medium Risk': 0, 'High Risk': 0 };
+    rows.forEach(c => {
+      const level = (c.risk_level || 'Low') + ' Risk';
+      counts[level] = (counts[level] || 0) + 1;
+    });
+    return counts;
+  }, [rows]);
+
+  const clientChartData = useMemo(() => ({
+    labels: ['Low Risk', 'Medium Risk', 'High Risk'],
+    datasets: [{
+      data: [clientRiskCounts['Low Risk'], clientRiskCounts['Medium Risk'], clientRiskCounts['High Risk']],
+      backgroundColor: ['#0F6E7C', '#E2A33D', '#D5514C'],
+      borderRadius: 6
+    }]
+  }), [clientRiskCounts]);
+
+  const clientChartOptions = useMemo(() => buildNameTooltipOptions((category) => {
+    const levelKey = category.replace(' Risk', '');
+    return rows
+      .filter(c => (c.risk_level || 'Low') === levelKey)
+      .map(c => `${c.client_name || c.name}${c.company_name ? ' (' + c.company_name + ')' : ''} · Contact: ${c.contact_person || 'N/A'}`);
+  }), [rows]);
+
   const openNew = () => {
     setForm(EMPTY); setEditingId(null); setModalOpen(true);
   };
@@ -114,7 +144,16 @@ export default function Clients() {
   };
 
   return (
-    <div>
+    <div className="space-y-4">
+      {/* Client Level Graph */}
+      <div className="bg-white border border-slate-200 rounded-[10px] p-4 shadow-sm">
+        <div className="font-semibold text-[14.5px]">Client Portfolio Risk & Engagement Level</div>
+        <div className="text-[12px] text-slate-500 mb-3">Breakdown of registered clients by risk status</div>
+        <div className="h-[180px]">
+          <Bar data={clientChartData} options={clientChartOptions} />
+        </div>
+      </div>
+
       <div className="flex flex-wrap gap-2.5 items-center justify-between mb-4">
         <input value={q} onChange={e => setQ(e.target.value)} placeholder="Search clients or company…" className="px-3 py-2 rounded-lg text-[13px] border border-slate-200 min-w-[220px]" />
         {canEdit && <button onClick={openNew} className="flex items-center gap-1.5 px-5 py-2 rounded-lg bg-teal text-white text-sm font-semibold hover:bg-teal-light"><Plus size={15} strokeWidth={2} /> Add Client</button>}

@@ -50,13 +50,18 @@ export default function Dashboard() {
     // Auto-create an employee record if none exists for this user
     if (!userEmployee && user?.id) {
       try {
-        const empCode = user.emp_code || `EMP-${Date.now().toString().slice(-4)}`;
+        // Query actual count to generate a collision-free emp_code
+        const { count: empCount } = await supabase
+          .from('employees')
+          .select('*', { count: 'exact', head: true });
+        const freshEmpCode = 'EMP-' + String((empCount || 0) + 1).padStart(3, '0');
+
         const { data: newEmp, error: insertErr } = await supabase
           .from('employees')
           .insert([{
             name: user.name || user.email,
             email: user.email,
-            emp_code: empCode,
+            emp_code: freshEmpCode,
             department: user.department || null,
             designation: user.designation || null,
             profile_id: user.id,
@@ -67,18 +72,34 @@ export default function Dashboard() {
           }])
           .select()
           .single();
-        if (!insertErr && newEmp) {
+
+        if (insertErr) {
+          console.error('[Dashboard] Employee auto-create failed:', insertErr.message);
+        } else if (newEmp) {
           userEmployee = newEmp;
           employees = [...(employees || []), newEmp];
         }
       } catch (_e) {
-        // If auto-create fails (e.g., duplicate emp_code), try fetching again
+        console.error('[Dashboard] Employee auto-create exception:', _e);
+      }
+
+      // Final fallback: fetch by profile_id or email in case it was just created
+      if (!userEmployee) {
         const { data: retryEmp } = await supabase
           .from('employees')
           .select('*')
           .eq('profile_id', user.id)
           .maybeSingle();
-        if (retryEmp) userEmployee = retryEmp;
+        if (retryEmp) {
+          userEmployee = retryEmp;
+        } else if (user.email) {
+          const { data: emailEmp } = await supabase
+            .from('employees')
+            .select('*')
+            .eq('email', user.email)
+            .maybeSingle();
+          if (emailEmp) userEmployee = emailEmp;
+        }
       }
     }
 

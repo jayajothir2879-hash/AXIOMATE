@@ -260,6 +260,7 @@ export default function Dashboard() {
           notifications={notifications}
           navigate={navigate}
           onLogSave={loadData}
+          authUser={user}
         />
       )}
 
@@ -269,6 +270,7 @@ export default function Dashboard() {
           notifications={notifications}
           navigate={navigate}
           onLogSave={loadData}
+          authUser={user}
         />
       )}
 
@@ -278,6 +280,7 @@ export default function Dashboard() {
           notifications={notifications}
           navigate={navigate}
           onLogSave={loadData}
+          authUser={user}
         />
       )}
     </div>
@@ -287,7 +290,7 @@ export default function Dashboard() {
 /* ==========================================
    ADMIN DASHBOARD VIEW
    ========================================== */
-function AdminDashboardView({ stats, notifications, navigate, onLogSave }) {
+function AdminDashboardView({ stats, notifications, navigate, onLogSave, authUser }) {
   const statusData = {
     labels: Object.keys(stats.statusCounts),
     datasets: [{ data: Object.values(stats.statusCounts), backgroundColor: ['#0F6E7C', '#2E9E5B', '#D5514C', '#93A0B8'], borderRadius: 6 }],
@@ -457,7 +460,7 @@ function AdminDashboardView({ stats, notifications, navigate, onLogSave }) {
         </div>
 
         <div>
-          <QuickLogHoursCard userEmployee={stats.userEmployee} onLogSave={onLogSave} />
+          <QuickLogHoursCard userEmployee={stats.userEmployee} onLogSave={onLogSave} authUser={authUser} />
         </div>
       </div>
     </div>
@@ -467,7 +470,7 @@ function AdminDashboardView({ stats, notifications, navigate, onLogSave }) {
 /* ==========================================
    PROJECT MANAGER DASHBOARD VIEW
    ========================================== */
-function PMDashboardView({ stats, notifications, navigate, onLogSave }) {
+function PMDashboardView({ stats, notifications, navigate, onLogSave, authUser }) {
   const statusData = {
     labels: Object.keys(stats.statusCounts),
     datasets: [{ data: Object.values(stats.statusCounts), backgroundColor: ['#0F6E7C', '#2E9E5B', '#D5514C', '#93A0B8'], borderRadius: 6 }],
@@ -554,7 +557,7 @@ function PMDashboardView({ stats, notifications, navigate, onLogSave }) {
         </div>
 
         <div>
-          <QuickLogHoursCard userEmployee={stats.userEmployee} onLogSave={onLogSave} />
+          <QuickLogHoursCard userEmployee={stats.userEmployee} onLogSave={onLogSave} authUser={user} />
         </div>
       </div>
     </div>
@@ -564,7 +567,7 @@ function PMDashboardView({ stats, notifications, navigate, onLogSave }) {
 /* ==========================================
    REUSABLE QUICK LOG HOURS CARD
    ========================================== */
-function QuickLogHoursCard({ userEmployee, onLogSave }) {
+function QuickLogHoursCard({ userEmployee: initialEmployee, onLogSave, authUser }) {
   const [logForm, setLogForm] = useState({
     log_date: new Date().toISOString().slice(0, 10),
     task: '',
@@ -572,18 +575,74 @@ function QuickLogHoursCard({ userEmployee, onLogSave }) {
   });
   const [submitting, setSubmitting] = useState(false);
 
+  // Resolve the employee record at submit time — never rely solely on the prop
+  const resolveEmployee = async () => {
+    if (initialEmployee) return initialEmployee;
+    if (!authUser?.id) return null;
+
+    // 1. Try by profile_id
+    const { data: byId } = await supabase
+      .from('employees')
+      .select('*')
+      .eq('profile_id', authUser.id)
+      .maybeSingle();
+    if (byId) return byId;
+
+    // 2. Try by email
+    if (authUser.email) {
+      const { data: byEmail } = await supabase
+        .from('employees')
+        .select('*')
+        .eq('email', authUser.email)
+        .maybeSingle();
+      if (byEmail) {
+        // Link it while we're here
+        await supabase.from('employees').update({ profile_id: authUser.id }).eq('id', byEmail.id);
+        return byEmail;
+      }
+    }
+
+    // 3. Auto-create as last resort
+    const { count: empCount } = await supabase
+      .from('employees')
+      .select('*', { count: 'exact', head: true });
+    const empCode = 'EMP-' + String((empCount || 0) + 1).padStart(3, '0');
+    const { data: created, error: createErr } = await supabase
+      .from('employees')
+      .insert([{
+        emp_code: empCode,
+        name: authUser.name || authUser.email,
+        email: authUser.email,
+        department: authUser.department || null,
+        designation: authUser.designation || null,
+        profile_id: authUser.id,
+        workload: 'Low',
+        productivity_score: 0,
+        weekly_hours: 0,
+        daily_hours: 0,
+      }])
+      .select()
+      .single();
+    if (createErr) {
+      console.error('[QuickLog] Auto-create employee failed:', createErr.message, createErr);
+      throw new Error('Could not create your employee record: ' + createErr.message);
+    }
+    return created;
+  };
+
   const handleQuickLog = async (e) => {
     e.preventDefault();
-    if (!userEmployee) {
-      toast('No employee record found for your user. Please contact an admin.');
-      return;
-    }
     setSubmitting(true);
     try {
+      const emp = await resolveEmployee();
+      if (!emp) {
+        toast('Could not find or create your employee record. Check console for details.');
+        return;
+      }
       const { error } = await supabase
         .from('work_logs')
         .insert([{
-          employee_id: userEmployee.id,
+          employee_id: emp.id,
           log_date: logForm.log_date,
           task: logForm.task || 'General work',
           hours: Number(logForm.hours)
@@ -594,6 +653,7 @@ function QuickLogHoursCard({ userEmployee, onLogSave }) {
       setLogForm({ log_date: new Date().toISOString().slice(0, 10), task: '', hours: 8 });
       onLogSave();
     } catch (err) {
+      console.error('[QuickLog] Submit error:', err);
       toast(err.message || 'Error logging hours.');
     } finally {
       setSubmitting(false);
@@ -632,7 +692,7 @@ function QuickLogHoursCard({ userEmployee, onLogSave }) {
 /* ==========================================
    EMPLOYEE DASHBOARD VIEW
    ========================================== */
-function EmployeeDashboardView({ stats, notifications, navigate, onLogSave }) {
+function EmployeeDashboardView({ stats, notifications, navigate, onLogSave, authUser }) {
   const workloadLabel = stats.userEmployee?.workload || 'Low';
   const weeklyHours = stats.userEmployee?.weekly_hours || 0;
   const prodScore = stats.userEmployee?.productivity_score || 0;
@@ -688,7 +748,7 @@ function EmployeeDashboardView({ stats, notifications, navigate, onLogSave }) {
 
         {/* Quick Log Form */}
         <div>
-          <QuickLogHoursCard userEmployee={stats.userEmployee} onLogSave={onLogSave} />
+          <QuickLogHoursCard userEmployee={stats.userEmployee} onLogSave={onLogSave} authUser={authUser} />
         </div>
       </div>
 

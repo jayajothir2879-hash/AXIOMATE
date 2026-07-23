@@ -23,11 +23,12 @@ export default function Dashboard() {
   const navigate = useNavigate();
 
   const loadData = async () => {
-    const [{ data: projects }, { data: employees }, { data: clients }] = await Promise.all([
+    const [{ data: projects }, { data: employeesRaw }, { data: clients }] = await Promise.all([
       supabase.from('projects').select('*'),
       supabase.from('employees').select('*, profiles(role)'),
       supabase.from('clients').select('*'),
     ]);
+    let employees = employeesRaw;
 
     const visibleEmployees = filterEmployees(employees || [], user);
     const visibleProjects = filterProjects(projects || [], employees || [], user);
@@ -43,8 +44,43 @@ export default function Dashboard() {
     });
 
     // Find current user's employee record (or matching by email)
-    const userEmployee = (employees || []).find(e => e.profile_id === user.id) ||
-                         (employees || []).find(e => e.email?.toLowerCase() === user.email?.toLowerCase());
+    let userEmployee = (employees || []).find(e => e.profile_id === user.id) ||
+                       (employees || []).find(e => e.email?.toLowerCase() === user.email?.toLowerCase());
+
+    // Auto-create an employee record if none exists for this user
+    if (!userEmployee && user?.id) {
+      try {
+        const empCode = user.emp_code || `EMP-${Date.now().toString().slice(-4)}`;
+        const { data: newEmp, error: insertErr } = await supabase
+          .from('employees')
+          .insert([{
+            name: user.name || user.email,
+            email: user.email,
+            emp_code: empCode,
+            department: user.department || null,
+            designation: user.designation || null,
+            profile_id: user.id,
+            workload: 'Low',
+            productivity_score: 0,
+            weekly_hours: 0,
+            daily_hours: 0,
+          }])
+          .select()
+          .single();
+        if (!insertErr && newEmp) {
+          userEmployee = newEmp;
+          employees = [...(employees || []), newEmp];
+        }
+      } catch (_e) {
+        // If auto-create fails (e.g., duplicate emp_code), try fetching again
+        const { data: retryEmp } = await supabase
+          .from('employees')
+          .select('*')
+          .eq('profile_id', user.id)
+          .maybeSingle();
+        if (retryEmp) userEmployee = retryEmp;
+      }
+    }
 
     const userEmpName = userEmployee?.name?.toLowerCase() || '';
     const userName = user.name?.toLowerCase() || '';

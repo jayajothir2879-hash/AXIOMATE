@@ -48,6 +48,45 @@ DO $$ BEGIN
   END IF;
 END $$;
 
+-- Allow authenticated users to INSERT their own profile row
+-- (needed when handle_new_user trigger missed them, e.g. signed up before trigger existed)
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='profiles' AND policyname='users can insert their own profile') THEN
+    CREATE POLICY "users can insert their own profile"
+      ON public.profiles FOR INSERT TO authenticated WITH CHECK (auth.uid() = id);
+  END IF;
+END $$;
+
+-- ---------------------------------------------------------------------------
+-- BACKFILL: Create profile rows for any auth.users that have no profiles row
+-- (covers users who signed up before the handle_new_user trigger was created)
+-- ---------------------------------------------------------------------------
+DO $$
+DECLARE
+  u RECORD;
+  next_val integer;
+  next_code text;
+BEGIN
+  FOR u IN
+    SELECT au.id, au.email, au.raw_user_meta_data
+    FROM auth.users au
+    WHERE NOT EXISTS (SELECT 1 FROM public.profiles p WHERE p.id = au.id)
+  LOOP
+    SELECT COALESCE(MAX(SUBSTRING(emp_code FROM '\d+')::integer), 0) + 1 INTO next_val FROM public.profiles;
+    next_code := 'EMP-' || LPAD(next_val::text, 3, '0');
+    INSERT INTO public.profiles (id, emp_code, name, email, role)
+    VALUES (
+      u.id,
+      next_code,
+      COALESCE(u.raw_user_meta_data->>'name', SPLIT_PART(u.email, '@', 1)),
+      u.email,
+      COALESCE(u.raw_user_meta_data->>'role', 'Employee')
+    )
+    ON CONFLICT (id) DO NOTHING;
+  END LOOP;
+END;
+$$;
+
 -- ---------------------------------------------------------------------------
 -- 2. AUTO-CREATE PROFILE trigger (fires on every new auth.users row)
 -- ---------------------------------------------------------------------------

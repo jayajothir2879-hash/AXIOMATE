@@ -17,15 +17,32 @@ async function loadProfile(authUser) {
     console.error('Could not load profile:', error.message);
   }
 
-  const baseProfile = data || {
-    id: authUser.id,
-    name: authUser.user_metadata?.name || authUser.email,
-    email: authUser.email,
-    role: authUser.user_metadata?.role || 'Employee',
-    theme: 'light',
-    language: 'English (US)',
-    two_factor: false
-  };
+  const baseProfile = data || await (async () => {
+    // Profile row missing (user signed up before trigger existed) — create it now
+    const empCode = 'EMP-' + String(Date.now()).slice(-6);
+    const name = authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'User';
+    const role = authUser.user_metadata?.role || 'Employee';
+    const { data: inserted } = await supabase
+      .from('profiles')
+      .upsert({
+        id: authUser.id,
+        emp_code: empCode,
+        name,
+        email: authUser.email,
+        role,
+      }, { onConflict: 'id' })
+      .select()
+      .single();
+    return inserted || {
+      id: authUser.id,
+      name,
+      email: authUser.email,
+      role,
+      theme: 'light',
+      language: 'English (US)',
+      two_factor: false
+    };
+  })();
 
   const profile = {
     ...baseProfile,

@@ -607,23 +607,38 @@ function QuickLogHoursCard({ userEmployee: initialEmployee, onLogSave, authUser 
       .from('employees')
       .select('*', { count: 'exact', head: true });
     const empCode = 'EMP-' + String((empCount || 0) + 1).padStart(3, '0');
+    const payload = {
+      emp_code: empCode,
+      name: authUser.name || authUser.email,
+      email: authUser.email,
+      department: authUser.department || null,
+      designation: authUser.designation || null,
+      profile_id: authUser.id,
+      workload: 'Low',
+      productivity_score: 0,
+      weekly_hours: 0,
+      daily_hours: 0,
+    };
     const { data: created, error: createErr } = await supabase
       .from('employees')
-      .insert([{
-        emp_code: empCode,
-        name: authUser.name || authUser.email,
-        email: authUser.email,
-        department: authUser.department || null,
-        designation: authUser.designation || null,
-        profile_id: authUser.id,
-        workload: 'Low',
-        productivity_score: 0,
-        weekly_hours: 0,
-        daily_hours: 0,
-      }])
+      .insert([payload])
       .select()
       .single();
+
     if (createErr) {
+      // FK violation: profile row doesn't exist yet — retry without profile_id
+      // AuthContext will upsert the profile on next load and link them
+      if (createErr.code === '23503') {
+        console.warn('[QuickLog] FK violation — creating employee without profile_id (will link on next login)');
+        const { data: createdNoLink, error: err2 } = await supabase
+          .from('employees')
+          .insert([{ ...payload, profile_id: null }])
+          .select()
+          .single();
+        if (!err2 && createdNoLink) return createdNoLink;
+        console.error('[QuickLog] Fallback create also failed:', err2?.message);
+        throw new Error('Database not fully set up. Please run fix_and_ensure_schema.sql in Supabase SQL Editor.');
+      }
       console.error('[QuickLog] Auto-create employee failed:', createErr.message, createErr);
       throw new Error('Could not create your employee record: ' + createErr.message);
     }

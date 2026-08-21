@@ -557,7 +557,7 @@ function PMDashboardView({ stats, notifications, navigate, onLogSave, authUser }
         </div>
 
         <div>
-          <QuickLogHoursCard userEmployee={stats.userEmployee} onLogSave={onLogSave} authUser={user} />
+          <QuickLogHoursCard userEmployee={stats.userEmployee} onLogSave={onLogSave} authUser={authUser} />
         </div>
       </div>
     </div>

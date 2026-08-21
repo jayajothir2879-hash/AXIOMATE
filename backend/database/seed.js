@@ -40,9 +40,12 @@ async function seed() {
 
     // ---- Employees ----
     // Set join dates for profiles
-    await client.query("UPDATE public.profiles SET join_date = '2021-03-15' WHERE email = 'admin@axiocloudsolutions.com'");
-    await client.query("UPDATE public.profiles SET join_date = '2022-01-10' WHERE email = 'pm@axiomate.com'");
-    await client.query("UPDATE public.profiles SET join_date = '2023-06-01' WHERE email = 'employee@axiomate.com'");
+    await client.query("UPDATE public.profiles SET join_date = '2021-03-15' WHERE email = 'kaviyaselvan2007@gmail.com'");
+    await client.query("UPDATE public.profiles SET join_date = '2022-01-10' WHERE email = 'abishekram030@gmail.com'");
+    await client.query("UPDATE public.profiles SET join_date = '2023-06-01' WHERE email = 'selvankavi14@gmail.com'");
+    await client.query("UPDATE public.profiles SET join_date = '2023-09-15' WHERE email = 'jothir@axiocloudsolutions.com'");
+    await client.query("UPDATE public.profiles SET join_date = '2024-02-10' WHERE email = 'sauravs@axiocloudsolutions.com'");
+    await client.query("UPDATE public.profiles SET join_date = '2024-05-01' WHERE email = 'kumart@axiocloudsolutions.com'");
 
     // Fetch profiles first to link profile_id to employee records
     const profilesRes = await client.query("SELECT id, email FROM public.profiles");
@@ -52,13 +55,12 @@ async function seed() {
     });
 
     const employees = [
-      ['EMP-001', 'Amara James', 'admin@axiocloudsolutions.com', '+1 415 555 0110', 'Executive', 'Platform Administrator', 'PRJ-001', 2.0, 10.0, 95, 'Low', profileMap['admin@axiocloudsolutions.com'] || null],
-      ['EMP-002', 'Derek Okafor', 'pm@axiomate.com', '+1 415 555 0121', 'Delivery', 'Senior Project Manager', 'PRJ-002', 4.0, 20.0, 90, 'Low', profileMap['pm@axiomate.com'] || null],
-      ['EMP-003', 'Priya Nandan', 'employee@axiomate.com', '+1 415 555 0134', 'Engineering', 'Software Engineer', 'PRJ-001,PRJ-002,PRJ-003,PRJ-005', 8.0, 40.0, 88, 'Medium', profileMap['employee@axiomate.com'] || null],
-      ['EMP-004', 'John Smith', 'john.smith@axiomate.com', '+1 415 555 0199', 'QA', 'QA Lead', 'PRJ-003,PRJ-005', 10.0, 50.0, 92, 'Overloaded', null],
-      ['EMP-005', 'Sarah Connor', 'sarah.c@axiomate.com', '+1 415 555 0100', 'DevOps', 'DevOps Specialist', 'PRJ-003,PRJ-004', 2.0, 10.0, 85, 'Low', null],
-      ['EMP-006', 'Bruce Wayne', 'bruce@wayne.co', '+1 415 555 0107', 'Security', 'Security Engineer', 'PRJ-005', 8.0, 40.0, 98, 'Medium', null],
-      ['EMP-007', 'Clark Kent', 'clark@dailyplanet.com', '+1 415 555 0182', 'Engineering', 'Technical Writer', 'PRJ-004', 4.0, 20.0, 80, 'Low', null]
+      ['EMP-001', 'Kavi', 'kaviyaselvan2007@gmail.com', '+1 415 555 0110', 'Executive', 'Platform Administrator', 'PRJ-001,PRJ-003,PRJ-005', 2.0, 10.0, 95, 'Low', profileMap['kaviyaselvan2007@gmail.com'] || null],
+      ['EMP-002', 'Abishekram', 'abishekram030@gmail.com', '+1 415 555 0121', 'Delivery', 'Senior Project Manager', 'PRJ-001,PRJ-002,PRJ-003,PRJ-005', 4.0, 20.0, 90, 'Low', profileMap['abishekram030@gmail.com'] || null],
+      ['EMP-003', 'Selvan', 'selvankavi14@gmail.com', '+1 415 555 0134', 'Engineering', 'Software Engineer', 'PRJ-001,PRJ-002,PRJ-003,PRJ-005', 8.0, 48.0, 88, 'Overloaded', profileMap['selvankavi14@gmail.com'] || null],
+      ['EMP-004', 'Jayajothi Rajendran', 'jothir@axiocloudsolutions.com', '+1 415 555 0135', 'Engineering', 'Senior Developer', 'PRJ-001,PRJ-002', 8.0, 40.0, 92, 'Medium', profileMap['jothir@axiocloudsolutions.com'] || null],
+      ['EMP-005', 'Saurav Suman', 'sauravs@axiocloudsolutions.com', '+1 415 555 0136', 'Engineering', 'Backend Engineer', 'PRJ-003,PRJ-005', 8.0, 40.0, 85, 'Low', profileMap['sauravs@axiocloudsolutions.com'] || null],
+      ['EMP-006', 'M Tarun Kumar', 'kumart@axiocloudsolutions.com', '+1 415 555 0137', 'Engineering', 'QA Engineer', 'PRJ-002,PRJ-005', 8.0, 40.0, 87, 'Low', profileMap['kumart@axiocloudsolutions.com'] || null]
     ];
 
     const empIds = {};
@@ -72,11 +74,11 @@ async function seed() {
 
     // ---- Projects ----
     const projects = [
-      ['PRJ-001', 'Axiomate Core Development', clientIds['CLI-001'], '2026-06-01', '2026-12-31', 65, 'High', 'Active', 'Amara James, Priya Nandan', 'Core AI engine optimization and timesheet modules'],
-      ['PRJ-002', 'Acma Portal Enhancement', clientIds['CLI-001'], '2026-01-10', '2026-05-30', 100, 'Medium', 'Completed', 'Derek Okafor, Priya Nandan', 'Upgraded client portal for invoice generation'],
-      ['PRJ-003', 'Beta Checkout Redesign', clientIds['CLI-002'], '2026-05-01', '2026-08-31', 30, 'High', 'Delayed', 'Priya Nandan, John Smith, Sarah Connor', 'Redesign cart and payment flow with Stripe integrations'],
-      ['PRJ-004', 'Delta Supply Chain Sync', clientIds['CLI-003'], '2026-04-15', '2026-10-15', 45, 'Low', 'On Hold', 'Sarah Connor, Clark Kent', 'Synchronize inventory endpoints with third-party logistics'],
-      ['PRJ-005', 'Nexus Payment Gateway', clientIds['CLI-005'], '2026-07-01', '2026-11-30', 10, 'High', 'Active', 'Priya Nandan, Bruce Wayne, John Smith', 'Secure 3DS 2.0 gateway implementation for financial services']
+      ['PRJ-001', 'Axiomate Core Development', clientIds['CLI-001'], '2026-06-01', '2026-12-31', 65, 'High', 'Active', 'Kavi, Abishekram, Selvan, Jayajothi Rajendran', 'Core AI engine optimization and timesheet modules'],
+      ['PRJ-002', 'Acma Portal Enhancement', clientIds['CLI-001'], '2026-01-10', '2026-05-30', 100, 'Medium', 'Completed', 'Abishekram, Selvan, Jayajothi Rajendran, M Tarun Kumar', 'Upgraded client portal for invoice generation'],
+      ['PRJ-003', 'Beta Checkout Redesign', clientIds['CLI-002'], '2026-05-01', '2026-08-31', 30, 'High', 'Delayed', 'Kavi, Abishekram, Selvan, Saurav Suman', 'Redesign cart and payment flow with Stripe integrations'],
+      ['PRJ-004', 'Delta Supply Chain Sync', clientIds['CLI-003'], '2026-04-15', '2026-10-15', 45, 'Low', 'On Hold', 'Saurav Suman, M Tarun Kumar', 'Synchronize inventory endpoints with third-party logistics'],
+      ['PRJ-005', 'Nexus Payment Gateway', clientIds['CLI-005'], '2026-07-01', '2026-11-30', 10, 'High', 'Active', 'Kavi, Abishekram, Selvan, Saurav Suman, M Tarun Kumar', 'Secure 3DS 2.0 gateway implementation for financial services']
     ];
 
     const projectIds = {};
@@ -90,11 +92,11 @@ async function seed() {
 
     // ---- Project Outcomes (Timesheet Sizing) ----
     const outcomes = [
-      [projectIds['PRJ-001'], 'SLG-POSENH-1', 'Auth Refactoring', '{"business_score":1,"technical_score":1,"integration_score":0,"testing_score":0,"data_score":0,"bottom_up_hours":4}', 'Original', 'Approved', 4, 3, 'In Progress', '2026-06-01', '2026-07-31', 'Priya Nandan'],
-      [projectIds['PRJ-001'], 'SLG-POSENH-2', 'Auto-Cancel Short-Picked Lines', '{"business_score":2,"technical_score":3,"integration_score":1,"testing_score":1,"data_score":1,"bottom_up_hours":30}', 'Original', 'Approved', 32, 28, 'Done', '2026-06-10', '2026-07-10', 'Priya Nandan'],
-      [projectIds['PRJ-003'], 'BETA-CHECK-1', 'Stripe Integration', '{"business_score":3,"technical_score":3,"integration_score":3,"testing_score":2,"data_score":2,"bottom_up_hours":75}', 'Original', 'Pending', 72, 5, 'Blocked', '2026-05-15', '2026-08-30', 'John Smith'],
-      [projectIds['PRJ-003'], 'BETA-CHECK-2', 'Cart Revamp', '{"business_score":1,"technical_score":2,"integration_score":1,"testing_score":1,"data_score":0,"bottom_up_hours":16}', 'Original', 'Approved', 16, 12, 'In Progress', '2026-05-01', '2026-08-15', 'Priya Nandan'],
-      [projectIds['PRJ-005'], 'NEX-GW-1', '3DS 2.0 Auth', '{"business_score":3,"technical_score":4,"integration_score":3,"testing_score":3,"data_score":3,"bottom_up_hours":140}', 'Original', 'Approved', 140, 0, 'Not Started', '2026-07-01', '2026-11-30', 'Bruce Wayne']
+      [projectIds['PRJ-001'], 'SLG-POSENH-1', 'Auth Refactoring', '{"business_score":1,"technical_score":1,"integration_score":0,"testing_score":0,"data_score":0,"bottom_up_hours":4}', 'Original', 'Approved', 4, 3, 'In Progress', '2026-06-01', '2026-07-31', 'Selvan'],
+      [projectIds['PRJ-001'], 'SLG-POSENH-2', 'Auto-Cancel Short-Picked Lines', '{"business_score":2,"technical_score":3,"integration_score":1,"testing_score":1,"data_score":1,"bottom_up_hours":30}', 'Original', 'Approved', 32, 28, 'Done', '2026-06-10', '2026-07-10', 'Selvan'],
+      [projectIds['PRJ-003'], 'BETA-CHECK-1', 'Stripe Integration', '{"business_score":3,"technical_score":3,"integration_score":3,"testing_score":2,"data_score":2,"bottom_up_hours":75}', 'Original', 'Pending', 72, 5, 'Blocked', '2026-05-15', '2026-08-30', 'Saurav Suman'],
+      [projectIds['PRJ-003'], 'BETA-CHECK-2', 'Cart Revamp', '{"business_score":1,"technical_score":2,"integration_score":1,"testing_score":1,"data_score":0,"bottom_up_hours":16}', 'Original', 'Approved', 16, 12, 'In Progress', '2026-05-01', '2026-08-15', 'Selvan'],
+      [projectIds['PRJ-005'], 'NEX-GW-1', '3DS 2.0 Auth', '{"business_score":3,"technical_score":4,"integration_score":3,"testing_score":3,"data_score":3,"bottom_up_hours":140}', 'Original', 'Approved', 140, 0, 'Not Started', '2026-07-01', '2026-11-30', 'M Tarun Kumar']
     ];
 
     for (const o of outcomes) {
@@ -111,12 +113,10 @@ async function seed() {
       [empIds['EMP-003'], '2026-07-15', 'Synced employee.assigned_projects on save', 8.0],
       [empIds['EMP-003'], '2026-07-16', 'Tested database trigger and manual seed scripts', 8.0],
       
-      [empIds['EMP-004'], '2026-07-13', 'Writing end-to-end integration tests for payment portal', 10.0],
-      [empIds['EMP-004'], '2026-07-14', 'Writing unit tests for authentication endpoints', 10.0],
-      [empIds['EMP-004'], '2026-07-15', 'Debugging session token expiration issues', 10.0],
-      [empIds['EMP-004'], '2026-07-16', 'Simulating high concurrency loads on checkout page', 10.0],
-      [empIds['EMP-004'], '2026-07-17', 'Testing 3DS redirect flows under slow connections', 10.0],
-
+      [empIds['EMP-004'], '2026-07-13', 'Writing end-to-end integration tests for payment portal', 8.0],
+      [empIds['EMP-004'], '2026-07-14', 'Writing unit tests for authentication endpoints', 8.0],
+      [empIds['EMP-004'], '2026-07-15', 'Debugging session token expiration issues', 8.0],
+      
       [empIds['EMP-005'], '2026-07-15', 'Configure Github Actions CI workflow', 5.0],
       [empIds['EMP-005'], '2026-07-16', 'Provision staging database replica', 5.0]
     ];
@@ -130,7 +130,7 @@ async function seed() {
 
     // ---- Notifications ----
     const notifications = [
-      ['warn', 'Workload Alert: John Smith', 'John Smith is overloaded with 50 hours/week.', false, '2026-07-17T08:30:00Z'],
+      ['warn', 'Workload Alert: Selvan', 'Selvan is overloaded with 48 hours/week.', false, '2026-07-17T08:30:00Z'],
       ['risk', 'High-Risk Alert: Beta Checkout Redesign', 'Beta Checkout Redesign is classified as High Risk: Progress is 25 pts behind expected schedule pace; Assigned team is overloaded.', false, '2026-07-16T14:45:00Z'],
       ['update', 'Deadline Reminder: Axiomate Core Development', 'Axiomate Core Development is approaching its deadline on 2026-12-31.', false, '2026-07-17T09:00:00Z'],
       ['update', 'Project Outcome Approved: SLG-POSENH-2', 'SLG-POSENH-2 has been approved for delivery.', true, '2026-07-15T11:00:00Z']

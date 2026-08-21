@@ -22,17 +22,17 @@ const NAV = [
     items: [
       { to: '/projects', label: 'Projects', Icon: FolderKanban, roles: ['Admin', 'Project Manager', 'Employee'] },
       { to: '/outcomes', label: 'Outcomes', Icon: ClipboardList, roles: ['Admin', 'Project Manager', 'Employee'] },
-      { to: '/employees', label: 'Employees', Icon: Users, roles: ['Admin', 'Project Manager', 'Employee'] },
-      { to: '/clients', label: 'Clients', Icon: Building2, roles: ['Admin', 'Project Manager', 'Employee'] },
+      { to: '/employees', label: 'Employees', Icon: Users, roles: ['Admin', 'Project Manager'] },
+      { to: '/clients', label: 'Clients', Icon: Building2, roles: ['Admin', 'Project Manager'] },
     ]
   },
   {
     group: 'Intelligence',
     items: [
-      { to: '/risk', label: 'Risk Prediction', Icon: ShieldAlert, roles: ['Admin', 'Project Manager', 'Employee'] },
+      { to: '/risk', label: 'Risk Prediction', Icon: ShieldAlert, roles: ['Admin', 'Project Manager'] },
       { to: '/effort', label: 'Effort Tracking', Icon: Clock, roles: ['Admin', 'Project Manager', 'Employee'] },
-      { to: '/timesheet', label: 'Common Timesheet', Icon: FileSpreadsheet, roles: ['Admin', 'Project Manager', 'Employee'] },
-      { to: '/reports', label: 'Reports', Icon: FileBarChart2, roles: ['Admin', 'Project Manager', 'Employee'] },
+      { to: '/timesheet', label: 'Common Timesheet', Icon: FileSpreadsheet, roles: ['Admin', 'Project Manager'] },
+      { to: '/reports', label: 'Reports', Icon: FileBarChart2, roles: ['Admin', 'Project Manager'] },
     ]
   },
   {

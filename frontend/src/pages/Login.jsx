@@ -267,6 +267,7 @@ export default function Login() {
                   <Key className="w-4 h-4" />
                 </span>
                 <input value={password} onChange={e => setPassword(e.target.value)} type="password"
+                  autoComplete="new-password"
                   className={`w-full pl-10 pr-3 py-2.5 rounded-lg text-sm bg-navy-800 border border-navy-700 text-white placeholder-slate-500 focus:outline-none focus:ring-2 transition-all ${inputFocusStyles[activeRole]}`}
                   placeholder="••••••••" />
               </div>
